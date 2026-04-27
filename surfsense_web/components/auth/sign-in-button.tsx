@@ -1,10 +1,20 @@
 "use client";
 
+import { useAtomValue } from "jotai";
 import { motion } from "motion/react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { useTheme } from "next-themes";
+import { currentUserAtom } from "@/atoms/user/user-query.atoms";
+import { userSettingsDialogAtom } from "@/atoms/settings/settings-dialog.atoms";
+import { SidebarUserProfile } from "@/components/layout/ui/sidebar/SidebarUserProfile";
+import { getLoginPath, logout } from "@/lib/auth-utils";
 import { AUTH_TYPE, BACKEND_URL } from "@/lib/env-config";
 import { trackLoginAttempt } from "@/lib/posthog/events";
+import { resetUser, trackLogout } from "@/lib/posthog/events";
 import { cn } from "@/lib/utils";
+import { useSetAtom } from "jotai";
 
 // Official Google "G" logo with brand colors
 const GoogleLogo = ({ className }: { className?: string }) => (
@@ -46,6 +56,71 @@ interface SignInButtonProps {
 
 export const SignInButton = ({ variant = "desktop" }: SignInButtonProps) => {
 	const isGoogleAuth = AUTH_TYPE === "GOOGLE";
+	const { data: currentUser } = useAtomValue(currentUserAtom);
+	const router = useRouter();
+	const pathname = usePathname();
+	const { theme, setTheme } = useTheme();
+	const setUserSettingsDialog = useSetAtom(userSettingsDialogAtom);
+
+	// If authenticated, show user profile menu instead of "Sign In".
+	if (currentUser) {
+		const handleUserSettings = () => {
+			// The dialog is mounted inside dashboard layouts (e.g. LayoutDataProvider).
+			// If we're on a public page, navigate to dashboard then open it.
+			if (!pathname?.startsWith("/dashboard")) {
+				router.push("/dashboard");
+			}
+			setUserSettingsDialog({ open: true, initialTab: "profile" });
+		};
+
+		const handleLogout = async () => {
+			try {
+				trackLogout();
+				resetUser();
+				await logout();
+				router.push(getLoginPath());
+			} catch (error) {
+				console.error("Error during logout:", error);
+				await logout();
+				router.push(getLoginPath());
+			}
+		};
+
+		// Desktop/compact: avatar-only trigger, but keep the full original menu.
+		if (variant === "desktop" || variant === "compact") {
+			return (
+				<SidebarUserProfile
+					user={{
+						email: currentUser.email,
+						name: currentUser.display_name ?? undefined,
+						avatarUrl: currentUser.avatar_url ?? undefined,
+					}}
+					onUserSettings={handleUserSettings}
+					onLogout={handleLogout}
+					isCollapsed
+					theme={theme}
+					setTheme={setTheme}
+					containerClassName="border-0 p-0"
+				/>
+			);
+		}
+
+		// Mobile: keep the existing richer menu surface.
+		return (
+			<SidebarUserProfile
+				user={{
+					email: currentUser.email,
+					name: currentUser.display_name ?? undefined,
+					avatarUrl: currentUser.avatar_url ?? undefined,
+				}}
+				onUserSettings={handleUserSettings}
+				onLogout={handleLogout}
+				isCollapsed={false}
+				theme={theme}
+				setTheme={setTheme}
+			/>
+		);
+	}
 
 	const handleGoogleLogin = () => {
 		trackLoginAttempt("google");

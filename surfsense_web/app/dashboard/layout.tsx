@@ -5,6 +5,8 @@ import { USER_QUERY_KEY } from "@/atoms/user/user-query.atoms";
 import { useGlobalLoadingEffect } from "@/hooks/use-global-loading";
 import { ensureTokensFromElectron, getBearerToken, redirectToLogin } from "@/lib/auth-utils";
 import { queryClient } from "@/lib/query-client/client";
+import { Navbar } from "@/components/homepage/navbar";
+import { UserSettingsDialog } from "@/components/settings/user-settings-dialog";
 
 interface DashboardLayoutProps {
 	children: React.ReactNode;
@@ -39,8 +41,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 	}
 
 	return (
-		<div className="h-full flex flex-col ">
-			<div className="flex-1 min-h-0">{children}</div>
+		<div className="flex h-dvh min-h-0 w-full flex-col overflow-hidden bg-muted">
+			<Navbar />
+			<main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-muted">{children}</main>
+			<UserSettingsDialog />
 		</div>
 	);
 }

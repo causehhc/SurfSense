@@ -157,7 +157,7 @@ export default function RegisterPage() {
 	};
 
 	return (
-		<div className="relative w-full overflow-hidden">
+		<div className="relative w-full overflow-hidden bg-muted">
 			<AmbientBackground />
 			<div className="mx-auto flex h-screen max-w-lg flex-col items-center justify-center px-6 md:px-0">
 				<Logo priority className="h-16 w-16 md:h-32 md:w-32 rounded-md transition-all" />

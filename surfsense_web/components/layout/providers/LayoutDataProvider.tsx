@@ -28,7 +28,6 @@ import {
 import { currentUserAtom } from "@/atoms/user/user-query.atoms";
 import { SearchSpaceSettingsDialog } from "@/components/settings/search-space-settings-dialog";
 import { TeamDialog } from "@/components/settings/team-dialog";
-import { UserSettingsDialog } from "@/components/settings/user-settings-dialog";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -693,82 +692,85 @@ export function LayoutDataProvider({ searchSpaceId, children }: LayoutDataProvid
 
 	return (
 		<>
-			<LayoutShell
-				searchSpaces={searchSpaces}
-				activeSearchSpaceId={Number(searchSpaceId)}
-				onSearchSpaceSelect={handleSearchSpaceSelect}
-				onSearchSpaceDelete={handleSearchSpaceDeleteClick}
-				onSearchSpaceSettings={handleSearchSpaceSettings}
-				onAddSearchSpace={handleAddSearchSpace}
-				searchSpace={activeSearchSpace}
-				navItems={navItems}
-				onNavItemClick={handleNavItemClick}
-				chats={myChats}
-				sharedChats={sharedChats}
-				activeChatId={currentChatId}
-				onNewChat={handleNewChat}
-				onChatSelect={handleChatSelect}
-				onChatRename={handleChatRename}
-				onChatDelete={handleChatDelete}
-				onChatArchive={handleChatArchive}
-				onViewAllSharedChats={handleViewAllSharedChats}
-				onViewAllPrivateChats={handleViewAllPrivateChats}
-				user={{
-					email: user?.email || "",
-					name: user?.display_name || user?.email?.split("@")[0],
-					avatarUrl: user?.avatar_url || undefined,
-				}}
-				onSettings={handleSettings}
-				onManageMembers={handleManageMembers}
-				onUserSettings={handleUserSettings}
-				onLogout={handleLogout}
-				pageUsage={pageUsage}
-				theme={theme}
-				setTheme={setTheme}
-				isChatPage={isChatPage}
-				isLoadingChats={isLoadingThreads}
-				activeSlideoutPanel={activeSlideoutPanel}
-				onSlideoutPanelChange={setActiveSlideoutPanel}
-				inbox={{
-					isOpen: isInboxSidebarOpen,
-					totalUnreadCount,
-					comments: {
-						items: commentsInbox.inboxItems,
-						unreadCount: commentsInbox.unreadCount,
-						loading: commentsInbox.loading,
-						loadingMore: commentsInbox.loadingMore,
-						hasMore: commentsInbox.hasMore,
-						loadMore: commentsInbox.loadMore,
-						markAsRead: commentsInbox.markAsRead,
-						markAllAsRead: commentsInbox.markAllAsRead,
-					},
-					status: {
-						items: statusInbox.inboxItems,
-						unreadCount: statusInbox.unreadCount,
-						loading: statusInbox.loading,
-						loadingMore: statusInbox.loadingMore,
-						hasMore: statusInbox.hasMore,
-						loadMore: statusInbox.loadMore,
-						markAsRead: statusInbox.markAsRead,
-						markAllAsRead: statusInbox.markAllAsRead,
-					},
-				}}
-				allSharedChatsPanel={{
-					searchSpaceId,
-				}}
-				allPrivateChatsPanel={{
-					searchSpaceId,
-				}}
-				documentsPanel={{
-					open: isDocumentsSidebarOpen,
-					onOpenChange: setIsDocumentsSidebarOpen,
-					isDocked: isDocumentsDocked,
-					onDockedChange: setIsDocumentsDocked,
-				}}
-				onTabSwitch={handleTabSwitch}
-			>
-				<Fragment key={chatResetKey}>{children}</Fragment>
-			</LayoutShell>
+			<div className="h-full min-h-0 w-full px-2 pb-2 pt-1 md:px-3 md:pb-3 md:pt-1 overflow-hidden">
+				<LayoutShell
+					className="h-full min-h-0"
+					searchSpaces={searchSpaces}
+					activeSearchSpaceId={Number(searchSpaceId)}
+					onSearchSpaceSelect={handleSearchSpaceSelect}
+					onSearchSpaceDelete={handleSearchSpaceDeleteClick}
+					onSearchSpaceSettings={handleSearchSpaceSettings}
+					onAddSearchSpace={handleAddSearchSpace}
+					searchSpace={activeSearchSpace}
+					navItems={navItems}
+					onNavItemClick={handleNavItemClick}
+					chats={myChats}
+					sharedChats={sharedChats}
+					activeChatId={currentChatId}
+					onNewChat={handleNewChat}
+					onChatSelect={handleChatSelect}
+					onChatRename={handleChatRename}
+					onChatDelete={handleChatDelete}
+					onChatArchive={handleChatArchive}
+					onViewAllSharedChats={handleViewAllSharedChats}
+					onViewAllPrivateChats={handleViewAllPrivateChats}
+					user={{
+						email: user?.email || "",
+						name: user?.display_name || user?.email?.split("@")[0],
+						avatarUrl: user?.avatar_url || undefined,
+					}}
+					onSettings={handleSettings}
+					onManageMembers={handleManageMembers}
+					onUserSettings={handleUserSettings}
+					onLogout={handleLogout}
+					pageUsage={pageUsage}
+					theme={theme}
+					setTheme={setTheme}
+					isChatPage={isChatPage}
+					isLoadingChats={isLoadingThreads}
+					activeSlideoutPanel={activeSlideoutPanel}
+					onSlideoutPanelChange={setActiveSlideoutPanel}
+					inbox={{
+						isOpen: isInboxSidebarOpen,
+						totalUnreadCount,
+						comments: {
+							items: commentsInbox.inboxItems,
+							unreadCount: commentsInbox.unreadCount,
+							loading: commentsInbox.loading,
+							loadingMore: commentsInbox.loadingMore,
+							hasMore: commentsInbox.hasMore,
+							loadMore: commentsInbox.loadMore,
+							markAsRead: commentsInbox.markAsRead,
+							markAllAsRead: commentsInbox.markAllAsRead,
+						},
+						status: {
+							items: statusInbox.inboxItems,
+							unreadCount: statusInbox.unreadCount,
+							loading: statusInbox.loading,
+							loadingMore: statusInbox.loadingMore,
+							hasMore: statusInbox.hasMore,
+							loadMore: statusInbox.loadMore,
+							markAsRead: statusInbox.markAsRead,
+							markAllAsRead: statusInbox.markAllAsRead,
+						},
+					}}
+					allSharedChatsPanel={{
+						searchSpaceId,
+					}}
+					allPrivateChatsPanel={{
+						searchSpaceId,
+					}}
+					documentsPanel={{
+						open: isDocumentsSidebarOpen,
+						onOpenChange: setIsDocumentsSidebarOpen,
+						isDocked: isDocumentsDocked,
+						onDockedChange: setIsDocumentsDocked,
+					}}
+					onTabSwitch={handleTabSwitch}
+				>
+					<Fragment key={chatResetKey}>{children}</Fragment>
+				</LayoutShell>
+			</div>
 
 			{/* Delete Chat Dialog */}
 			<AlertDialog open={showDeleteChatDialog} onOpenChange={setShowDeleteChatDialog}>
@@ -907,7 +909,6 @@ export function LayoutDataProvider({ searchSpaceId, children }: LayoutDataProvid
 
 			{/* Settings Dialogs */}
 			<SearchSpaceSettingsDialog searchSpaceId={Number(searchSpaceId)} />
-			<UserSettingsDialog />
 			<TeamDialog searchSpaceId={Number(searchSpaceId)} />
 		</>
 	);

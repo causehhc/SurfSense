@@ -11,6 +11,9 @@ export function AuthRedirect() {
 		if (getBearerToken()) {
 			router.replace("/dashboard");
 		}
+		else {
+			router.replace("/login");
+		}
 	}, [router]);
 
 	return null;

@@ -102,6 +102,7 @@ export function FreeLayoutDataProvider({ children }: FreeLayoutDataProviderProps
 
 	return (
 		<LayoutShell
+			className="min-h-[100dvh]"
 			searchSpaces={[GUEST_SPACE]}
 			activeSearchSpaceId={0}
 			onSearchSpaceSelect={handleSearchSpaceSelect}

@@ -2,24 +2,21 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-// Desktop: three-panel layout shares one minimum width.
-// Keep this in sync with `RIGHT_PANEL_MIN_WIDTH` in `useRightPanelResize`.
-export const SIDEBAR_MIN_WIDTH = 295;
-export const SIDEBAR_DEFAULT_WIDTH = 485;
-export const SIDEBAR_MAX_WIDTH = 480;
+export const RIGHT_PANEL_MIN_WIDTH = 295;
+export const RIGHT_PANEL_MAX_WIDTH = 960;
 
-interface UseSidebarResizeReturn {
-	sidebarWidth: number;
+interface UseRightPanelResizeReturn {
+	panelWidth: number;
 	handleMouseDown: (e: React.MouseEvent) => void;
 	isDragging: boolean;
 }
 
 const DESKTOP_LAYOUT_SELECTOR = '[data-layout="desktop-shell"]';
-const RIGHT_PANEL_SELECTOR = '[data-panel="right"]';
-const MAIN_MIN_WIDTH = 295;
+const SIDEBAR_SELECTOR = '[data-panel="sidebar"]';
+const MAIN_MIN_WIDTH = RIGHT_PANEL_MIN_WIDTH;
 
 function clampWidth(width: number) {
-	return Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, width));
+	return Math.min(RIGHT_PANEL_MAX_WIDTH, Math.max(RIGHT_PANEL_MIN_WIDTH, width));
 }
 
 function getElementWidth(selector: string): number {
@@ -29,52 +26,53 @@ function getElementWidth(selector: string): number {
 	return el.getBoundingClientRect().width;
 }
 
-export function useSidebarResize(defaultWidth = SIDEBAR_DEFAULT_WIDTH): UseSidebarResizeReturn {
+export function useRightPanelResize(defaultWidth: number): UseRightPanelResizeReturn {
 	// Intentionally not persisted: width resets on page reload.
-	const [sidebarWidth, setSidebarWidth] = useState(() => clampWidth(defaultWidth));
+	const [panelWidth, setPanelWidth] = useState(() => clampWidth(defaultWidth));
 	const [isDragging, setIsDragging] = useState(false);
 
 	const startXRef = useRef(0);
-	const startWidthRef = useRef(sidebarWidth);
+	const startWidthRef = useRef(panelWidth);
 	const hasUserResizedRef = useRef(false);
 
-	// Keep in sync with changing defaults while not dragging.
+	// Keep in sync with changing defaults (e.g. tab width) while not dragging.
 	useEffect(() => {
 		if (isDragging) return;
 		// Only apply new defaults if the user hasn't resized in this page session.
-		if (!hasUserResizedRef.current) setSidebarWidth(clampWidth(defaultWidth));
+		if (!hasUserResizedRef.current) setPanelWidth(clampWidth(defaultWidth));
 	}, [defaultWidth, isDragging]);
 
 	const handleMouseDown = useCallback(
 		(e: React.MouseEvent) => {
 			e.preventDefault();
 			startXRef.current = e.clientX;
-			startWidthRef.current = sidebarWidth;
+			startWidthRef.current = panelWidth;
 			setIsDragging(true);
 
 			document.body.style.cursor = "col-resize";
 			document.body.style.userSelect = "none";
 		},
-		[sidebarWidth]
+		[panelWidth]
 	);
 
 	useEffect(() => {
 		if (!isDragging) return;
 
 		const handleMouseMove = (e: MouseEvent) => {
-			const delta = e.clientX - startXRef.current;
+			// Dragging left increases width, dragging right decreases width.
+			const delta = startXRef.current - e.clientX;
 			const containerWidth = getElementWidth(DESKTOP_LAYOUT_SELECTOR);
-			const rightPanelWidth = getElementWidth(RIGHT_PANEL_SELECTOR);
+			const sidebarWidth = getElementWidth(SIDEBAR_SELECTOR);
 
 			// Dynamic max: determined by available space in the container.
 			// Fixed MAX is only used as a fallback when measurement isn't available.
 			const maxAllowed =
-				containerWidth > 0 ? containerWidth - rightPanelWidth - MAIN_MIN_WIDTH : SIDEBAR_MAX_WIDTH;
-			const minAllowed = SIDEBAR_MIN_WIDTH;
+				containerWidth > 0 ? containerWidth - sidebarWidth - MAIN_MIN_WIDTH : RIGHT_PANEL_MAX_WIDTH;
+			const minAllowed = RIGHT_PANEL_MIN_WIDTH;
 
 			const next = startWidthRef.current + delta;
 			const clamped = Math.min(Math.max(next, minAllowed), Math.max(minAllowed, maxAllowed));
-			setSidebarWidth(clamped);
+			setPanelWidth(clamped);
 		};
 
 		const handleMouseUp = () => {
@@ -95,9 +93,6 @@ export function useSidebarResize(defaultWidth = SIDEBAR_DEFAULT_WIDTH): UseSideb
 		};
 	}, [isDragging]);
 
-	return {
-		sidebarWidth,
-		handleMouseDown,
-		isDragging,
-	};
+	return { panelWidth, handleMouseDown, isDragging };
 }
+

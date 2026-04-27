@@ -11,6 +11,7 @@ import { closeEditorPanelAtom, editorPanelAtom } from "@/atoms/editor/editor-pan
 import { rightPanelCollapsedAtom, rightPanelTabAtom } from "@/atoms/layout/right-panel.atom";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useRightPanelResize } from "../../hooks/useRightPanelResize";
 import { DocumentsSidebar } from "../sidebar";
 
 const EditorPanelContent = dynamic(
@@ -44,61 +45,28 @@ interface RightPanelProps {
 	};
 }
 
-function CollapseButton({ onClick }: { onClick: () => void }) {
+function RightPanelCollapseButton({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: () => void }) {
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>
-				<Button variant="ghost" size="icon" onClick={onClick} className="h-8 w-8 shrink-0">
-					<PanelRightClose className="h-4 w-4" />
-					<span className="sr-only">Collapse panel</span>
+				<Button variant="ghost" size="icon" onClick={onToggle} className="h-8 w-8 shrink-0">
+					{isCollapsed ? <PanelRight className="h-4 w-4" /> : <PanelRightClose className="h-4 w-4" />}
+					<span className="sr-only">{isCollapsed ? "Expand panel" : "Collapse panel"}</span>
 				</Button>
 			</TooltipTrigger>
-			<TooltipContent side="left">Collapse panel</TooltipContent>
+			<TooltipContent side={isCollapsed ? "left" : "bottom"}>
+				{isCollapsed ? "Expand panel" : "Collapse panel"}
+			</TooltipContent>
 		</Tooltip>
 	);
 }
 
-/**
- * Absolutely positioned expand button — renders at top-right of the main
- * container so it occupies the same screen position as the collapse button
- * inside the Documents header.
- */
-export function RightPanelExpandButton() {
-	const [collapsed, setCollapsed] = useAtom(rightPanelCollapsedAtom);
-	const documentsOpen = useAtomValue(documentsSidebarOpenAtom);
-	const reportState = useAtomValue(reportPanelAtom);
-	const editorState = useAtomValue(editorPanelAtom);
-	const hitlEditState = useAtomValue(hitlEditPanelAtom);
-	const reportOpen = reportState.isOpen && !!reportState.reportId;
-	const editorOpen = editorState.isOpen && !!editorState.documentId;
-	const hitlEditOpen = hitlEditState.isOpen && !!hitlEditState.onSave;
-	const hasContent = documentsOpen || reportOpen || editorOpen || hitlEditOpen;
-
-	if (!collapsed || !hasContent) return null;
-
-	return (
-		<div className="flex shrink-0 items-center px-0.5">
-			<Tooltip>
-				<TooltipTrigger asChild>
-					<Button
-						variant="ghost"
-						size="icon"
-						onClick={() => startTransition(() => setCollapsed(false))}
-						className="h-8 w-8 shrink-0 -m-0.5"
-					>
-						<PanelRight className="h-4 w-4" />
-						<span className="sr-only">Expand panel</span>
-					</Button>
-				</TooltipTrigger>
-				<TooltipContent side="left">Expand panel</TooltipContent>
-			</Tooltip>
-		</div>
-	);
-}
-
-const PANEL_WIDTHS = { sources: 420, report: 640, editor: 640, "hitl-edit": 640 } as const;
+const PANEL_WIDTHS = { sources: 485, report: 640, editor: 640, "hitl-edit": 640 } as const;
+const COLLAPSED_PANEL_WIDTH = 60;
 
 export function RightPanel({ documentsPanel }: RightPanelProps) {
+	if (!documentsPanel) return null;
+
 	const [activeTab] = useAtom(rightPanelTabAtom);
 	const reportState = useAtomValue(reportPanelAtom);
 	const closeReport = useSetAtom(closeReportPanelAtom);
@@ -108,10 +76,11 @@ export function RightPanel({ documentsPanel }: RightPanelProps) {
 	const closeHitlEdit = useSetAtom(closeHitlEditPanelAtom);
 	const [collapsed, setCollapsed] = useAtom(rightPanelCollapsedAtom);
 
-	const documentsOpen = documentsPanel?.open ?? false;
+	const documentsOpen = documentsPanel.open ?? false;
 	const reportOpen = reportState.isOpen && !!reportState.reportId;
 	const editorOpen = editorState.isOpen && !!editorState.documentId;
 	const hitlEditOpen = hitlEditState.isOpen && !!hitlEditState.onSave;
+	const hasContent = documentsOpen || reportOpen || editorOpen || hitlEditOpen;
 
 	useEffect(() => {
 		if (!reportOpen && !editorOpen && !hitlEditOpen) return;
@@ -125,8 +94,6 @@ export function RightPanel({ documentsPanel }: RightPanelProps) {
 		document.addEventListener("keydown", handleKeyDown);
 		return () => document.removeEventListener("keydown", handleKeyDown);
 	}, [reportOpen, editorOpen, hitlEditOpen, closeReport, closeEditor, closeHitlEdit]);
-
-	const isVisible = (documentsOpen || reportOpen || editorOpen || hitlEditOpen) && !collapsed;
 
 	let effectiveTab = activeTab;
 	if (effectiveTab === "hitl-edit" && !hitlEditOpen) {
@@ -146,60 +113,61 @@ export function RightPanel({ documentsPanel }: RightPanelProps) {
 	}
 
 	const targetWidth = PANEL_WIDTHS[effectiveTab];
-	const collapseButton = <CollapseButton onClick={() => setCollapsed(true)} />;
+	const { panelWidth, handleMouseDown: onResizeMouseDown, isDragging: isResizing } = useRightPanelResize(
+		targetWidth
+	);
 
-	if (!isVisible) return null;
+	if (!hasContent) return null;
 
 	return (
-		<aside
-			style={{ width: targetWidth }}
-			className="flex h-full shrink-0 flex-col rounded-xl border bg-sidebar text-sidebar-foreground overflow-hidden transition-[width] duration-200 ease-out"
-		>
-			<div className="relative flex-1 min-h-0 overflow-hidden">
-				{effectiveTab === "sources" && documentsOpen && documentsPanel && (
-					<div className="h-full">
-						<DocumentsSidebar
-							open={documentsPanel.open}
-							onOpenChange={documentsPanel.onOpenChange}
-							embedded
-							headerAction={collapseButton}
+		<>
+			{/* Resize handle — negative margins eat the flex gap so spacing stays unchanged */}
+			{!collapsed && (
+				<div
+					role="slider"
+					aria-label="Resize right panel"
+					aria-valuemin={0}
+					aria-valuemax={100}
+					aria-valuenow={50}
+					tabIndex={0}
+					onMouseDown={onResizeMouseDown}
+					className="hidden md:block h-full cursor-col-resize z-30 focus:outline-none"
+					style={{ width: 8, marginLeft: -8, marginRight: -0 }}
+				/>
+			)}
+
+			<aside
+				className={[
+					"relative flex h-full min-h-0 max-h-full shrink-0 flex-col overflow-hidden rounded-xl border bg-main-panel text-foreground select-none",
+					!isResizing ? "transition-[width] duration-200 ease-out" : "",
+					collapsed ? "w-[60px]" : "",
+				].join(" ")}
+				style={collapsed ? undefined : { width: panelWidth }}
+				data-panel="right"
+			>
+				{collapsed ? (
+					<div className="flex h-14 shrink-0 items-center justify-center border-b">
+						<RightPanelCollapseButton
+							isCollapsed={collapsed}
+							onToggle={() => startTransition(() => setCollapsed(false))}
 						/>
 					</div>
-				)}
-				{effectiveTab === "report" && reportOpen && (
-					<div className="h-full flex flex-col">
-						<ReportPanelContent
-							reportId={reportState.reportId as number}
-							title={reportState.title || "Report"}
-							onClose={closeReport}
-							shareToken={reportState.shareToken}
-						/>
+				) : (
+					<div className="relative flex-1 min-h-0 overflow-hidden">
+							<div className="h-full">
+								<DocumentsSidebar
+									open={documentsPanel.open}
+									onOpenChange={documentsPanel.onOpenChange}
+									embedded
+									variant="compact"
+									headerAction={
+										<RightPanelCollapseButton isCollapsed={false} onToggle={() => setCollapsed(true)} />
+									}
+								/>
+							</div>
 					</div>
 				)}
-				{effectiveTab === "editor" && editorOpen && (
-					<div className="h-full flex flex-col">
-						<EditorPanelContent
-							documentId={editorState.documentId as number}
-							searchSpaceId={editorState.searchSpaceId as number}
-							title={editorState.title}
-							onClose={closeEditor}
-						/>
-					</div>
-				)}
-				{effectiveTab === "hitl-edit" && hitlEditOpen && hitlEditState.onSave && (
-					<div className="h-full flex flex-col">
-						<HitlEditPanelContent
-							title={hitlEditState.title}
-							content={hitlEditState.content}
-							toolName={hitlEditState.toolName}
-							contentFormat={hitlEditState.contentFormat}
-							extraFields={hitlEditState.extraFields}
-							onSave={hitlEditState.onSave}
-							onClose={closeHitlEdit}
-						/>
-					</div>
-				)}
-			</div>
-		</aside>
+			</aside>
+		</>
 	);
 }

@@ -36,6 +36,7 @@ import { searchSpacesAtom } from "@/atoms/search-spaces/search-space-query.atoms
 import { CreateFolderDialog } from "@/components/documents/CreateFolderDialog";
 import type { DocumentNodeDoc } from "@/components/documents/DocumentNode";
 import { DocumentsFilters } from "@/components/documents/DocumentsFilters";
+import { useDocumentUploadDialog } from "@/components/assistant-ui/document-upload-popup";
 import type { FolderDisplay } from "@/components/documents/FolderNode";
 import { FolderPickerDialog } from "@/components/documents/FolderPickerDialog";
 import { FolderTreeView } from "@/components/documents/FolderTreeView";
@@ -77,8 +78,20 @@ import { uploadFolderScan } from "@/lib/folder-sync-upload";
 import { getSupportedExtensionsSet } from "@/lib/supported-extensions";
 import { queries } from "@/zero/queries/index";
 import { SidebarSlideOutPanel } from "./SidebarSlideOutPanel";
+import { SidebarButton } from "./SidebarButton";
+import { SidebarSection } from "./SidebarSection";
 
 const NON_DELETABLE_DOCUMENT_TYPES: readonly string[] = ["SURFSENSE_DOCS"];
+
+type WatchedFolder = {
+	path: string;
+	name: string;
+	rootFolderId: number | null;
+	searchSpaceId?: number;
+	excludePatterns?: string[];
+	fileExtensions?: string[] | null;
+	active?: boolean;
+};
 
 const SHOWCASE_CONNECTORS = [
 	{ type: "GOOGLE_DRIVE_CONNECTOR", label: "Google Drive" },
@@ -101,6 +114,12 @@ interface DocumentsSidebarProps {
 	embedded?: boolean;
 	/** Optional action element rendered in the header row (e.g. collapse button) */
 	headerAction?: React.ReactNode;
+	/**
+	 * Rendering density.
+	 * - full: existing documents UI (filters/connectors/etc)
+	 * - compact: minimal UI (Upload + collapsible file list)
+	 */
+	variant?: "full" | "compact";
 }
 
 export function DocumentsSidebar(props: DocumentsSidebarProps) {
@@ -118,6 +137,7 @@ function AuthenticatedDocumentsSidebar({
 	onDockedChange,
 	embedded = false,
 	headerAction,
+	variant = "full",
 }: DocumentsSidebarProps) {
 	const t = useTranslations("documents");
 	const tSidebar = useTranslations("sidebar");
@@ -130,6 +150,7 @@ function AuthenticatedDocumentsSidebar({
 	const openEditorPanel = useSetAtom(openEditorPanelAtom);
 	const { data: connectors } = useAtomValue(connectorsAtom);
 	const connectorCount = connectors?.length ?? 0;
+	const { openDialog: openUploadDialog } = useDocumentUploadDialog();
 
 	const [search, setSearch] = useState("");
 	const debouncedSearch = useDebouncedValue(search, 250);
@@ -214,10 +235,8 @@ function AuthenticatedDocumentsSidebar({
 						active: true,
 					});
 				}
-				const recovered = await api.getWatchedFolders();
-				const ids = new Set(
-					recovered.filter((f) => f.rootFolderId != null).map((f) => f.rootFolderId as number)
-				);
+				const recovered = (await api.getWatchedFolders()) as WatchedFolder[];
+				const ids = new Set<number>(recovered.filter((f) => f.rootFolderId != null).map((f) => f.rootFolderId!));
 				setWatchedFolderIds(ids);
 				return;
 			} catch (err) {
@@ -225,8 +244,8 @@ function AuthenticatedDocumentsSidebar({
 			}
 		}
 
-		const ids = new Set(
-			folders.filter((f) => f.rootFolderId != null).map((f) => f.rootFolderId as number)
+		const ids = new Set<number>(
+			(folders as WatchedFolder[]).filter((f) => f.rootFolderId != null).map((f) => f.rootFolderId!)
 		);
 		setWatchedFolderIds(ids);
 	}, [searchSpaceId, electronAPI]);
@@ -375,7 +394,7 @@ function AuthenticatedDocumentsSidebar({
 		async (folder: FolderDisplay) => {
 			if (!electronAPI) return;
 
-			const watchedFolders = await electronAPI.getWatchedFolders();
+			const watchedFolders = (await electronAPI.getWatchedFolders()) as WatchedFolder[];
 			const matched = watchedFolders.find((wf) => wf.rootFolderId === folder.id);
 			if (!matched) {
 				toast.error("This folder is not being watched");
@@ -405,7 +424,7 @@ function AuthenticatedDocumentsSidebar({
 		async (folder: FolderDisplay) => {
 			if (!electronAPI) return;
 
-			const watchedFolders = await electronAPI.getWatchedFolders();
+			const watchedFolders = (await electronAPI.getWatchedFolders()) as WatchedFolder[];
 			const matched = watchedFolders.find((wf) => wf.rootFolderId === folder.id);
 			if (!matched) {
 				toast.error("This folder is not being watched");
@@ -438,7 +457,7 @@ function AuthenticatedDocumentsSidebar({
 			if (!confirm(`Delete folder "${folder.name}" and all its contents?`)) return;
 			try {
 				if (electronAPI) {
-					const watchedFolders = await electronAPI.getWatchedFolders();
+					const watchedFolders = (await electronAPI.getWatchedFolders()) as WatchedFolder[];
 					const matched = watchedFolders.find((wf) => wf.rootFolderId === folder.id);
 					if (matched) {
 						await electronAPI.removeWatchedFolder(matched.path);
@@ -838,207 +857,274 @@ function AuthenticatedDocumentsSidebar({
 
 	const documentsContent = (
 		<>
-			<div className="shrink-0 flex h-14 items-center px-4">
-				<div className="flex w-full items-center justify-between">
-					<div className="flex items-center gap-2">
-						{isMobile && (
-							<Button
-								variant="ghost"
-								size="icon"
-								className="h-8 w-8 rounded-full"
-								onClick={() => onOpenChange(false)}
-							>
-								<ChevronLeft className="h-4 w-4 text-muted-foreground" />
-								<span className="sr-only">{tSidebar("close") || "Close"}</span>
-							</Button>
-						)}
-						<h2 className="select-none text-lg font-semibold">{t("title") || "Documents"}</h2>
+			{variant === "compact" ? (
+				<div className="flex-1 min-h-0 flex flex-col">
+					{/* Header (title + collapse action) */}
+					<div className="shrink-0 flex h-14 items-center px-4 border-b">
+						<div className="flex w-full items-center justify-between">
+							<h2 className="select-none text-lg font-semibold">{t("title") || "Documents"}</h2>
+							<div className="flex items-center gap-1">{headerAction}</div>
+						</div>
 					</div>
-					<div className="flex items-center gap-1">
-						{!isMobile && onDockedChange && (
-							<Tooltip>
-								<TooltipTrigger asChild>
+
+					<div className="flex flex-col gap-0.5 py-2">
+						<SidebarButton icon={Upload} label="Upload" onClick={openUploadDialog} />
+					</div>
+
+					<div className="flex-1 flex flex-col gap-1 py-2 w-full min-h-0 overflow-hidden">
+						<SidebarSection title={t("title") || "Documents"} defaultOpen={true} fillHeight={true}>
+							<div className="relative flex-1 min-h-0 overflow-auto">
+								<FolderTreeView
+									folders={treeFolders}
+									documents={searchFilteredDocuments}
+									expandedIds={expandedIds}
+									onToggleExpand={toggleFolderExpand}
+									mentionedDocIds={mentionedDocIds}
+									onToggleChatMention={handleToggleChatMention}
+									onToggleFolderSelect={handleToggleFolderSelect}
+									onRenameFolder={handleRenameFolder}
+									onDeleteFolder={handleDeleteFolder}
+									onMoveFolder={handleMoveFolder}
+									onCreateFolder={handleCreateFolder}
+									searchQuery={undefined}
+									onPreviewDocument={(doc) => {
+										openEditorPanel({
+											documentId: doc.id,
+											searchSpaceId,
+											title: doc.title,
+										});
+									}}
+									onEditDocument={(doc) => {
+										openEditorPanel({
+											documentId: doc.id,
+											searchSpaceId,
+											title: doc.title,
+										});
+									}}
+									onDeleteDocument={(doc) => handleDeleteDocument(doc.id)}
+									onMoveDocument={handleMoveDocument}
+									onExportDocument={handleExportDocument}
+									onVersionHistory={(doc) => setVersionDocId(doc.id)}
+									activeTypes={[]}
+									onDropIntoFolder={handleDropIntoFolder}
+									onReorderFolder={handleReorderFolder}
+									watchedFolderIds={watchedFolderIds}
+									onRescanFolder={handleRescanFolder}
+									onStopWatchingFolder={handleStopWatching}
+									onExportFolder={handleExportFolder}
+								/>
+							</div>
+						</SidebarSection>
+					</div>
+				</div>
+			) : (
+				<>
+					<div className="shrink-0 flex h-14 items-center px-4">
+						<div className="flex w-full items-center justify-between">
+							<div className="flex items-center gap-2">
+								{isMobile && (
 									<Button
 										variant="ghost"
 										size="icon"
 										className="h-8 w-8 rounded-full"
-										onClick={() => {
-											if (isDocked) {
-												onDockedChange(false);
-												onOpenChange(false);
-											} else {
-												onDockedChange(true);
-											}
-										}}
+										onClick={() => onOpenChange(false)}
 									>
-										{isDocked ? (
-											<ChevronLeft className="h-4 w-4 text-muted-foreground" />
-										) : (
-											<ChevronRight className="h-4 w-4 text-muted-foreground" />
-										)}
-										<span className="sr-only">{isDocked ? "Collapse panel" : "Expand panel"}</span>
+										<ChevronLeft className="h-4 w-4 text-muted-foreground" />
+										<span className="sr-only">{tSidebar("close") || "Close"}</span>
 									</Button>
-								</TooltipTrigger>
-								<TooltipContent className="z-80">
-									{isDocked ? "Collapse panel" : "Expand panel"}
-								</TooltipContent>
-							</Tooltip>
-						)}
-						{headerAction}
-					</div>
-				</div>
-			</div>
-
-			{/* Connected tools strip */}
-			<div className="shrink-0 mx-4 mt-4 mb-4 flex select-none items-center gap-2 rounded-lg border bg-muted/50 transition-colors hover:bg-muted/80">
-				<button
-					type="button"
-					onClick={() => setConnectorDialogOpen(true)}
-					className="flex items-center gap-2 min-w-0 flex-1 text-left px-3 py-2"
-				>
-					<Unplug className="size-4 shrink-0 text-muted-foreground" />
-					<span className="truncate text-xs text-muted-foreground">
-						{connectorCount > 0 ? "Manage connectors" : "Connect your connectors"}
-					</span>
-					{connectorCount > 0 && (
-						<span className="shrink-0 rounded-full bg-muted-foreground/15 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-							{connectorCount}
-						</span>
-					)}
-					<AvatarGroup className="ml-auto shrink-0">
-						{connectorCount > 0 && connectors
-							? connectors.slice(0, isMobile ? 5 : 9).map((connector, i) => {
-									const avatar = (
-										<Avatar
-											key={connector.id}
-											className="size-6"
-											style={{ zIndex: Math.max(9 - i, 1) }}
-										>
-											<AvatarFallback className="bg-muted text-[10px]">
-												{getConnectorIcon(connector.connector_type, "size-3.5")}
-											</AvatarFallback>
-										</Avatar>
-									);
-									if (isMobile) return avatar;
-									return (
-										<Tooltip key={connector.id}>
-											<TooltipTrigger asChild>{avatar}</TooltipTrigger>
-											<TooltipContent side="top" className="text-xs">
-												{connector.name}
-											</TooltipContent>
-										</Tooltip>
-									);
-								})
-							: (isMobile ? SHOWCASE_CONNECTORS.slice(0, 5) : SHOWCASE_CONNECTORS).map(
-									({ type, label }, i) => {
-										const avatar = (
-											<Avatar
-												key={type}
-												className="size-6"
-												style={{ zIndex: SHOWCASE_CONNECTORS.length - i }}
-											>
-												<AvatarFallback className="bg-muted text-[10px]">
-													{getConnectorIcon(type, "size-3.5")}
-												</AvatarFallback>
-											</Avatar>
-										);
-										if (isMobile) return avatar;
-										return (
-											<Tooltip key={type}>
-												<TooltipTrigger asChild>{avatar}</TooltipTrigger>
-												<TooltipContent side="top" className="text-xs">
-													{label}
-												</TooltipContent>
-											</Tooltip>
-										);
-									}
 								)}
-					</AvatarGroup>
-				</button>
-			</div>
-
-			{isElectron && (
-				<button
-					type="button"
-					onClick={handleWatchLocalFolder}
-					className="shrink-0 mx-4 mb-4 flex select-none items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 transition-colors hover:bg-muted/80"
-				>
-					<FolderClock className="size-4 shrink-0 text-muted-foreground" />
-					<span className="truncate text-xs text-muted-foreground">Watch local folder</span>
-				</button>
-			)}
-
-			<div className="flex-1 min-h-0 pt-0 flex flex-col">
-				<div className="px-4 pb-2">
-					<DocumentsFilters
-						typeCounts={typeCounts}
-						onSearch={setSearch}
-						searchValue={search}
-						onToggleType={onToggleType}
-						activeTypes={activeTypes}
-						onCreateFolder={() => handleCreateFolder(null)}
-						aiSortEnabled={aiSortEnabled}
-						aiSortBusy={aiSortBusy}
-						onToggleAiSort={handleToggleAiSort}
-					/>
-				</div>
-
-				<div className="relative flex-1 min-h-0 overflow-auto">
-					{deletableSelectedIds.length > 0 && (
-						<div className="absolute inset-x-0 top-0 z-10 flex items-center justify-center px-4 py-1.5 animate-in fade-in duration-150 pointer-events-none">
-							<button
-								type="button"
-								onClick={() => setBulkDeleteConfirmOpen(true)}
-								className="pointer-events-auto flex items-center gap-1.5 px-3 py-1 rounded-md bg-destructive text-destructive-foreground shadow-lg text-xs font-medium hover:bg-destructive/90 transition-colors"
-							>
-								<Trash2 size={12} />
-								Delete {deletableSelectedIds.length}{" "}
-								{deletableSelectedIds.length === 1 ? "item" : "items"}
-							</button>
+								<h2 className="select-none text-lg font-semibold">{t("title") || "Documents"}</h2>
+							</div>
+							<div className="flex items-center gap-1">
+								{!isMobile && onDockedChange && (
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<Button
+												variant="ghost"
+												size="icon"
+												className="h-8 w-8 rounded-full"
+												onClick={() => {
+													if (isDocked) {
+														onDockedChange(false);
+														onOpenChange(false);
+													} else {
+														onDockedChange(true);
+													}
+												}}
+											>
+												{isDocked ? (
+													<ChevronLeft className="h-4 w-4 text-muted-foreground" />
+												) : (
+													<ChevronRight className="h-4 w-4 text-muted-foreground" />
+												)}
+												<span className="sr-only">
+													{isDocked ? "Collapse panel" : "Expand panel"}
+												</span>
+											</Button>
+										</TooltipTrigger>
+										<TooltipContent className="z-80">
+											{isDocked ? "Collapse panel" : "Expand panel"}
+										</TooltipContent>
+									</Tooltip>
+								)}
+								{headerAction}
+							</div>
 						</div>
+					</div>
+
+					{/* Connected tools strip */}
+					<div className="shrink-0 mx-4 mt-4 mb-4 flex select-none items-center gap-2 rounded-lg border bg-muted/50 transition-colors hover:bg-muted/80">
+						<button
+							type="button"
+							onClick={() => setConnectorDialogOpen(true)}
+							className="flex items-center gap-2 min-w-0 flex-1 text-left px-3 py-2"
+						>
+							<Unplug className="size-4 shrink-0 text-muted-foreground" />
+							<span className="truncate text-xs text-muted-foreground">
+								{connectorCount > 0 ? "Manage connectors" : "Connect your connectors"}
+							</span>
+							{connectorCount > 0 && (
+								<span className="shrink-0 rounded-full bg-muted-foreground/15 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+									{connectorCount}
+								</span>
+							)}
+							<AvatarGroup className="ml-auto shrink-0">
+								{connectorCount > 0 && connectors
+									? connectors.slice(0, isMobile ? 5 : 9).map((connector, i) => {
+											const avatar = (
+												<Avatar
+													key={connector.id}
+													className="size-6"
+													style={{ zIndex: Math.max(9 - i, 1) }}
+												>
+													<AvatarFallback className="bg-muted text-[10px]">
+														{getConnectorIcon(connector.connector_type, "size-3.5")}
+													</AvatarFallback>
+												</Avatar>
+											);
+											if (isMobile) return avatar;
+											return (
+												<Tooltip key={connector.id}>
+													<TooltipTrigger asChild>{avatar}</TooltipTrigger>
+													<TooltipContent side="top" className="text-xs">
+														{connector.name}
+													</TooltipContent>
+												</Tooltip>
+											);
+										})
+									: (isMobile
+											? SHOWCASE_CONNECTORS.slice(0, 5)
+											: SHOWCASE_CONNECTORS
+										).map(({ type, label }, i) => {
+											const avatar = (
+												<Avatar
+													key={type}
+													className="size-6"
+													style={{ zIndex: SHOWCASE_CONNECTORS.length - i }}
+												>
+													<AvatarFallback className="bg-muted text-[10px]">
+														{getConnectorIcon(type, "size-3.5")}
+													</AvatarFallback>
+												</Avatar>
+											);
+											if (isMobile) return avatar;
+											return (
+												<Tooltip key={type}>
+													<TooltipTrigger asChild>{avatar}</TooltipTrigger>
+													<TooltipContent side="top" className="text-xs">
+														{label}
+													</TooltipContent>
+												</Tooltip>
+											);
+										})}
+							</AvatarGroup>
+						</button>
+					</div>
+
+					{isElectron && (
+						<button
+							type="button"
+							onClick={handleWatchLocalFolder}
+							className="shrink-0 mx-4 mb-4 flex select-none items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 transition-colors hover:bg-muted/80"
+						>
+							<FolderClock className="size-4 shrink-0 text-muted-foreground" />
+							<span className="truncate text-xs text-muted-foreground">Watch local folder</span>
+						</button>
 					)}
 
-					<FolderTreeView
-						folders={treeFolders}
-						documents={searchFilteredDocuments}
-						expandedIds={expandedIds}
-						onToggleExpand={toggleFolderExpand}
-						mentionedDocIds={mentionedDocIds}
-						onToggleChatMention={handleToggleChatMention}
-						onToggleFolderSelect={handleToggleFolderSelect}
-						onRenameFolder={handleRenameFolder}
-						onDeleteFolder={handleDeleteFolder}
-						onMoveFolder={handleMoveFolder}
-						onCreateFolder={handleCreateFolder}
-						searchQuery={debouncedSearch.trim() || undefined}
-						onPreviewDocument={(doc) => {
-							openEditorPanel({
-								documentId: doc.id,
-								searchSpaceId,
-								title: doc.title,
-							});
-						}}
-						onEditDocument={(doc) => {
-							openEditorPanel({
-								documentId: doc.id,
-								searchSpaceId,
-								title: doc.title,
-							});
-						}}
-						onDeleteDocument={(doc) => handleDeleteDocument(doc.id)}
-						onMoveDocument={handleMoveDocument}
-						onExportDocument={handleExportDocument}
-						onVersionHistory={(doc) => setVersionDocId(doc.id)}
-						activeTypes={activeTypes}
-						onDropIntoFolder={handleDropIntoFolder}
-						onReorderFolder={handleReorderFolder}
-						watchedFolderIds={watchedFolderIds}
-						onRescanFolder={handleRescanFolder}
-						onStopWatchingFolder={handleStopWatching}
-						onExportFolder={handleExportFolder}
-					/>
-				</div>
-			</div>
+					<div className="flex-1 min-h-0 pt-0 flex flex-col">
+						<div className="px-4 pb-2">
+							<DocumentsFilters
+								typeCounts={typeCounts}
+								onSearch={setSearch}
+								searchValue={search}
+								onToggleType={onToggleType}
+								activeTypes={activeTypes}
+								onCreateFolder={() => handleCreateFolder(null)}
+								aiSortEnabled={aiSortEnabled}
+								aiSortBusy={aiSortBusy}
+								onToggleAiSort={handleToggleAiSort}
+							/>
+						</div>
+
+						<div className="relative flex-1 min-h-0 overflow-auto">
+							{deletableSelectedIds.length > 0 && (
+								<div className="absolute inset-x-0 top-0 z-10 flex items-center justify-center px-4 py-1.5 animate-in fade-in duration-150 pointer-events-none">
+									<button
+										type="button"
+										onClick={() => setBulkDeleteConfirmOpen(true)}
+										className="pointer-events-auto flex items-center gap-1.5 px-3 py-1 rounded-md bg-destructive text-destructive-foreground shadow-lg text-xs font-medium hover:bg-destructive/90 transition-colors"
+									>
+										<Trash2 size={12} />
+										Delete {deletableSelectedIds.length}{" "}
+										{deletableSelectedIds.length === 1 ? "item" : "items"}
+									</button>
+								</div>
+							)}
+
+							<FolderTreeView
+								folders={treeFolders}
+								documents={searchFilteredDocuments}
+								expandedIds={expandedIds}
+								onToggleExpand={toggleFolderExpand}
+								mentionedDocIds={mentionedDocIds}
+								onToggleChatMention={handleToggleChatMention}
+								onToggleFolderSelect={handleToggleFolderSelect}
+								onRenameFolder={handleRenameFolder}
+								onDeleteFolder={handleDeleteFolder}
+								onMoveFolder={handleMoveFolder}
+								onCreateFolder={handleCreateFolder}
+								searchQuery={debouncedSearch.trim() || undefined}
+								onPreviewDocument={(doc) => {
+									openEditorPanel({
+										documentId: doc.id,
+										searchSpaceId,
+										title: doc.title,
+									});
+								}}
+								onEditDocument={(doc) => {
+									openEditorPanel({
+										documentId: doc.id,
+										searchSpaceId,
+										title: doc.title,
+									});
+								}}
+								onDeleteDocument={(doc) => handleDeleteDocument(doc.id)}
+								onMoveDocument={handleMoveDocument}
+								onExportDocument={handleExportDocument}
+								onVersionHistory={(doc) => setVersionDocId(doc.id)}
+								activeTypes={activeTypes}
+								onDropIntoFolder={handleDropIntoFolder}
+								onReorderFolder={handleReorderFolder}
+								watchedFolderIds={watchedFolderIds}
+								onRescanFolder={handleRescanFolder}
+								onStopWatchingFolder={handleStopWatching}
+								onExportFolder={handleExportFolder}
+							/>
+						</div>
+					</div>
+				</>
+			)}
 
 			{versionDocId !== null && (
 				<VersionHistoryDialog
@@ -1163,7 +1249,7 @@ function AuthenticatedDocumentsSidebar({
 
 	if (embedded) {
 		return (
-			<div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
+			<div className="flex h-full flex-col bg-main-panel text-foreground">
 				{documentsContent}
 			</div>
 		);
@@ -1172,7 +1258,7 @@ function AuthenticatedDocumentsSidebar({
 	if (isDocked && open && !isMobile) {
 		return (
 			<aside
-				className="h-full w-[380px] shrink-0 bg-sidebar text-sidebar-foreground flex flex-col border-r"
+				className="h-full w-[380px] shrink-0 bg-main-panel text-foreground flex flex-col border-r"
 				aria-label={t("title") || "Documents"}
 			>
 				{documentsContent}
@@ -1255,6 +1341,7 @@ function AnonymousDocumentsSidebar({
 	onDockedChange,
 	embedded = false,
 	headerAction,
+	variant = "full",
 }: DocumentsSidebarProps) {
 	const t = useTranslations("documents");
 	const tSidebar = useTranslations("sidebar");
@@ -1396,189 +1483,251 @@ function AnonymousDocumentsSidebar({
 				onChange={handleFileChange}
 				disabled={isUploading}
 			/>
-
-			{/* Header */}
-			<div className="shrink-0 flex h-14 items-center px-4">
-				<div className="flex w-full items-center justify-between">
-					<div className="flex items-center gap-2">
-						<h2 className="select-none text-lg font-semibold">{t("title") || "Documents"}</h2>
+			{variant === "compact" ? (
+				<div className="flex-1 min-h-0 flex flex-col">
+					{/* Header (title + collapse action) */}
+					<div className="shrink-0 flex h-14 items-center px-4 border-b">
+						<div className="flex w-full items-center justify-between">
+							<h2 className="select-none text-lg font-semibold">{t("title") || "Documents"}</h2>
+							<div className="flex items-center gap-1">{headerAction}</div>
+						</div>
 					</div>
-					<div className="flex items-center gap-1">
-						{isMobile && (
-							<Button
-								variant="ghost"
-								size="icon"
-								className="h-8 w-8 rounded-full"
-								onClick={() => onOpenChange(false)}
-							>
-								<X className="h-4 w-4 text-muted-foreground" />
-								<span className="sr-only">{tSidebar("close") || "Close"}</span>
-							</Button>
-						)}
-						{!isMobile && onDockedChange && (
-							<Tooltip>
-								<TooltipTrigger asChild>
+
+					<div className="flex flex-col gap-0.5 py-2">
+						<SidebarButton
+							icon={Upload}
+							label={isUploading ? "Uploading..." : "Upload"}
+							onClick={handleAnonUploadClick}
+							buttonProps={{ disabled: isUploading }}
+						/>
+					</div>
+
+					<div className="flex-1 flex flex-col gap-1 py-2 w-full min-h-0 overflow-hidden">
+						<SidebarSection title={t("title") || "Documents"} defaultOpen={true} fillHeight={true}>
+							<div className="relative flex-1 min-h-0 overflow-auto">
+								<FolderTreeView
+									folders={[]}
+									documents={searchFilteredDocs}
+									expandedIds={new Set()}
+									onToggleExpand={() => {}}
+									mentionedDocIds={mentionedDocIds}
+									onToggleChatMention={handleToggleChatMention}
+									onToggleFolderSelect={() => {}}
+									onRenameFolder={() => gate("rename folders")}
+									onDeleteFolder={() => gate("delete folders")}
+									onMoveFolder={() => gate("organize folders")}
+									onCreateFolder={() => gate("create folders")}
+									searchQuery={undefined}
+									onPreviewDocument={() => gate("preview documents")}
+									onEditDocument={() => gate("edit documents")}
+									onDeleteDocument={async () => {
+										handleRemoveDoc();
+										setSidebarDocs((prev) => prev.filter((d) => d.id !== -1));
+										return true;
+									}}
+									onMoveDocument={() => gate("organize documents")}
+									onExportDocument={() => gate("export documents")}
+									onVersionHistory={() => gate("view version history")}
+									activeTypes={[]}
+									onDropIntoFolder={async () => gate("organize documents")}
+									onReorderFolder={async () => gate("organize folders")}
+									watchedFolderIds={new Set()}
+									onRescanFolder={() => gate("watch local folders")}
+									onStopWatchingFolder={() => gate("watch local folders")}
+									onExportFolder={() => gate("export folders")}
+								/>
+							</div>
+						</SidebarSection>
+					</div>
+				</div>
+			) : (
+				<>
+					{/* Header */}
+					<div className="shrink-0 flex h-14 items-center px-4">
+						<div className="flex w-full items-center justify-between">
+							<div className="flex items-center gap-2">
+								<h2 className="select-none text-lg font-semibold">{t("title") || "Documents"}</h2>
+							</div>
+							<div className="flex items-center gap-1">
+								{isMobile && (
 									<Button
 										variant="ghost"
 										size="icon"
 										className="h-8 w-8 rounded-full"
-										onClick={() => {
-											if (isDocked) {
-												onDockedChange(false);
-												onOpenChange(false);
-											} else {
-												onDockedChange(true);
-											}
-										}}
+										onClick={() => onOpenChange(false)}
 									>
-										{isDocked ? (
-											<ChevronLeft className="h-4 w-4 text-muted-foreground" />
-										) : (
-											<ChevronRight className="h-4 w-4 text-muted-foreground" />
-										)}
-										<span className="sr-only">{isDocked ? "Collapse panel" : "Expand panel"}</span>
+										<X className="h-4 w-4 text-muted-foreground" />
+										<span className="sr-only">{tSidebar("close") || "Close"}</span>
 									</Button>
-								</TooltipTrigger>
-								<TooltipContent className="z-80">
-									{isDocked ? "Collapse panel" : "Expand panel"}
-								</TooltipContent>
-							</Tooltip>
-						)}
-						{headerAction}
-					</div>
-				</div>
-			</div>
-
-			{/* Connectors strip (gated) */}
-			<div className="shrink-0 mx-4 mt-4 mb-4 flex select-none items-center gap-2 rounded-lg border bg-muted/50 transition-colors hover:bg-muted/80">
-				<button
-					type="button"
-					onClick={() => gate("connect your data sources")}
-					className="flex items-center gap-2 min-w-0 flex-1 text-left px-3 py-2"
-				>
-					<Unplug className="size-4 shrink-0 text-muted-foreground" />
-					<span className="truncate text-xs text-muted-foreground">Connect your connectors</span>
-					<AvatarGroup className="ml-auto shrink-0">
-						{(isMobile ? SHOWCASE_CONNECTORS.slice(0, 5) : SHOWCASE_CONNECTORS).map(
-							({ type, label }, i) => {
-								const avatar = (
-									<Avatar
-										key={type}
-										className="size-6"
-										style={{ zIndex: SHOWCASE_CONNECTORS.length - i }}
-									>
-										<AvatarFallback className="bg-muted text-[10px]">
-											{getConnectorIcon(type, "size-3.5")}
-										</AvatarFallback>
-									</Avatar>
-								);
-								if (isMobile) return avatar;
-								return (
-									<Tooltip key={type}>
-										<TooltipTrigger asChild>{avatar}</TooltipTrigger>
-										<TooltipContent side="top" className="text-xs">
-											{label}
+								)}
+								{!isMobile && onDockedChange && (
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<Button
+												variant="ghost"
+												size="icon"
+												className="h-8 w-8 rounded-full"
+												onClick={() => {
+													if (isDocked) {
+														onDockedChange(false);
+														onOpenChange(false);
+													} else {
+														onDockedChange(true);
+													}
+												}}
+											>
+												{isDocked ? (
+													<ChevronLeft className="h-4 w-4 text-muted-foreground" />
+												) : (
+													<ChevronRight className="h-4 w-4 text-muted-foreground" />
+												)}
+												<span className="sr-only">
+													{isDocked ? "Collapse panel" : "Expand panel"}
+												</span>
+											</Button>
+										</TooltipTrigger>
+										<TooltipContent className="z-80">
+											{isDocked ? "Collapse panel" : "Expand panel"}
 										</TooltipContent>
 									</Tooltip>
-								);
-							}
-						)}
-					</AvatarGroup>
-				</button>
-			</div>
-
-			{/* Filters & upload */}
-			<div className="flex-1 min-h-0 pt-0 flex flex-col">
-				<div className="px-4 pb-2">
-					<DocumentsFilters
-						typeCounts={hasDoc ? { FILE: 1 } : {}}
-						onSearch={setSearch}
-						searchValue={search}
-						onToggleType={() => {}}
-						activeTypes={[]}
-						onCreateFolder={() => gate("create folders")}
-						aiSortEnabled={false}
-						onUploadClick={handleAnonUploadClick}
-					/>
-				</div>
-
-				<div className="relative flex-1 min-h-0 overflow-auto">
-					<FolderTreeView
-						folders={[]}
-						documents={searchFilteredDocs}
-						expandedIds={new Set()}
-						onToggleExpand={() => {}}
-						mentionedDocIds={mentionedDocIds}
-						onToggleChatMention={handleToggleChatMention}
-						onToggleFolderSelect={() => {}}
-						onRenameFolder={() => gate("rename folders")}
-						onDeleteFolder={() => gate("delete folders")}
-						onMoveFolder={() => gate("organize folders")}
-						onCreateFolder={() => gate("create folders")}
-						searchQuery={search.trim() || undefined}
-						onPreviewDocument={() => gate("preview documents")}
-						onEditDocument={() => gate("edit documents")}
-						onDeleteDocument={async () => {
-							handleRemoveDoc();
-							setSidebarDocs((prev) => prev.filter((d) => d.id !== -1));
-							return true;
-						}}
-						onMoveDocument={() => gate("organize documents")}
-						onExportDocument={() => gate("export documents")}
-						onVersionHistory={() => gate("view version history")}
-						activeTypes={[]}
-						onDropIntoFolder={async () => gate("organize documents")}
-						onReorderFolder={async () => gate("organize folders")}
-						watchedFolderIds={new Set()}
-						onRescanFolder={() => gate("watch local folders")}
-						onStopWatchingFolder={() => gate("watch local folders")}
-						onExportFolder={() => gate("export folders")}
-					/>
-
-					{!hasDoc && (
-						<div className="px-4 py-8 text-center">
-							<button
-								type="button"
-								onClick={handleAnonUploadClick}
-								disabled={isUploading}
-								className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-primary/30 px-4 py-6 text-sm text-primary transition-colors hover:border-primary/60 hover:bg-primary/5 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
-							>
-								<Upload className="size-4" />
-								{isUploading ? "Uploading..." : "Upload a document"}
-							</button>
-							<p className="mt-2 text-[11px] text-muted-foreground leading-relaxed">
-								Text, code, CSV, and HTML files only. Create an account for PDFs, images, and 30+
-								connectors.
-							</p>
+								)}
+								{headerAction}
+							</div>
 						</div>
-					)}
-				</div>
-			</div>
+					</div>
 
-			{/* CTA footer */}
-			<div className="border-t p-4 space-y-3">
-				<div className="flex items-center gap-2 text-xs text-muted-foreground">
-					<Lock className="size-3.5 shrink-0" />
-					<span>Create an account to unlock:</span>
-				</div>
-				<ul className="space-y-1.5 text-xs text-muted-foreground pl-5">
-					<li className="flex items-center gap-1.5">
-						<Paperclip className="size-3 shrink-0" /> PDF, Word, images, audio uploads
-					</li>
-					<li className="flex items-center gap-1.5">
-						<FileText className="size-3 shrink-0" /> Unlimited documents
-					</li>
-				</ul>
-				<Button size="sm" className="w-full" asChild>
-					<Link href="/register">Create Free Account</Link>
-				</Button>
-			</div>
+					{/* Connectors strip (gated) */}
+					<div className="shrink-0 mx-4 mt-4 mb-4 flex select-none items-center gap-2 rounded-lg border bg-muted/50 transition-colors hover:bg-muted/80">
+						<button
+							type="button"
+							onClick={() => gate("connect your data sources")}
+							className="flex items-center gap-2 min-w-0 flex-1 text-left px-3 py-2"
+						>
+							<Unplug className="size-4 shrink-0 text-muted-foreground" />
+							<span className="truncate text-xs text-muted-foreground">Connect your connectors</span>
+							<AvatarGroup className="ml-auto shrink-0">
+								{(isMobile ? SHOWCASE_CONNECTORS.slice(0, 5) : SHOWCASE_CONNECTORS).map(
+									({ type, label }, i) => {
+										const avatar = (
+											<Avatar
+												key={type}
+												className="size-6"
+												style={{ zIndex: SHOWCASE_CONNECTORS.length - i }}
+											>
+												<AvatarFallback className="bg-muted text-[10px]">
+													{getConnectorIcon(type, "size-3.5")}
+												</AvatarFallback>
+											</Avatar>
+										);
+										if (isMobile) return avatar;
+										return (
+											<Tooltip key={type}>
+												<TooltipTrigger asChild>{avatar}</TooltipTrigger>
+												<TooltipContent side="top" className="text-xs">
+													{label}
+												</TooltipContent>
+											</Tooltip>
+										);
+									}
+								)}
+							</AvatarGroup>
+						</button>
+					</div>
+
+					{/* Filters & upload */}
+					<div className="flex-1 min-h-0 pt-0 flex flex-col">
+						<div className="px-4 pb-2">
+							<DocumentsFilters
+								typeCounts={hasDoc ? { FILE: 1 } : {}}
+								onSearch={setSearch}
+								searchValue={search}
+								onToggleType={() => {}}
+								activeTypes={[]}
+								onCreateFolder={() => gate("create folders")}
+								aiSortEnabled={false}
+								onUploadClick={handleAnonUploadClick}
+							/>
+						</div>
+
+						<div className="relative flex-1 min-h-0 overflow-auto">
+							<FolderTreeView
+								folders={[]}
+								documents={searchFilteredDocs}
+								expandedIds={new Set()}
+								onToggleExpand={() => {}}
+								mentionedDocIds={mentionedDocIds}
+								onToggleChatMention={handleToggleChatMention}
+								onToggleFolderSelect={() => {}}
+								onRenameFolder={() => gate("rename folders")}
+								onDeleteFolder={() => gate("delete folders")}
+								onMoveFolder={() => gate("organize folders")}
+								onCreateFolder={() => gate("create folders")}
+								searchQuery={search.trim() || undefined}
+								onPreviewDocument={() => gate("preview documents")}
+								onEditDocument={() => gate("edit documents")}
+								onDeleteDocument={async () => {
+									handleRemoveDoc();
+									setSidebarDocs((prev) => prev.filter((d) => d.id !== -1));
+									return true;
+								}}
+								onMoveDocument={() => gate("organize documents")}
+								onExportDocument={() => gate("export documents")}
+								onVersionHistory={() => gate("view version history")}
+								activeTypes={[]}
+								onDropIntoFolder={async () => gate("organize documents")}
+								onReorderFolder={async () => gate("organize folders")}
+								watchedFolderIds={new Set()}
+								onRescanFolder={() => gate("watch local folders")}
+								onStopWatchingFolder={() => gate("watch local folders")}
+								onExportFolder={() => gate("export folders")}
+							/>
+
+							{!hasDoc && (
+								<div className="px-4 py-8 text-center">
+									<button
+										type="button"
+										onClick={handleAnonUploadClick}
+										disabled={isUploading}
+										className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-primary/30 px-4 py-6 text-sm text-primary transition-colors hover:border-primary/60 hover:bg-primary/5 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+									>
+										<Upload className="size-4" />
+										{isUploading ? "Uploading..." : "Upload a document"}
+									</button>
+									<p className="mt-2 text-[11px] text-muted-foreground leading-relaxed">
+										Text, code, CSV, and HTML files only. Create an account for PDFs, images, and 30+
+										connectors.
+									</p>
+								</div>
+							)}
+						</div>
+					</div>
+
+					{/* CTA footer */}
+					<div className="border-t p-4 space-y-3">
+						<div className="flex items-center gap-2 text-xs text-muted-foreground">
+							<Lock className="size-3.5 shrink-0" />
+							<span>Create an account to unlock:</span>
+						</div>
+						<ul className="space-y-1.5 text-xs text-muted-foreground pl-5">
+							<li className="flex items-center gap-1.5">
+								<Paperclip className="size-3 shrink-0" /> PDF, Word, images, audio uploads
+							</li>
+							<li className="flex items-center gap-1.5">
+								<FileText className="size-3 shrink-0" /> Unlimited documents
+							</li>
+						</ul>
+						<Button size="sm" className="w-full" asChild>
+							<Link href="/register">Create Free Account</Link>
+						</Button>
+					</div>
+				</>
+			)}
 		</>
 	);
 
 	if (embedded) {
 		return (
-			<div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
+			<div className="flex h-full flex-col bg-main-panel text-foreground">
 				{documentsContent}
 			</div>
 		);
@@ -1587,7 +1736,7 @@ function AnonymousDocumentsSidebar({
 	if (isDocked && open && !isMobile) {
 		return (
 			<aside
-				className="h-full w-[380px] shrink-0 bg-sidebar text-sidebar-foreground flex flex-col border-r"
+				className="h-full w-[380px] shrink-0 bg-main-panel text-foreground flex flex-col border-r"
 				aria-label={t("title") || "Documents"}
 			>
 				{documentsContent}

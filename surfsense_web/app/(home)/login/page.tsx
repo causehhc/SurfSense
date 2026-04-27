@@ -6,7 +6,6 @@ import { useTranslations } from "next-intl";
 import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Logo } from "@/components/Logo";
-import { useGlobalLoadingEffect } from "@/hooks/use-global-loading";
 import { getAuthErrorDetails, shouldRetry } from "@/lib/auth-errors";
 import { AUTH_TYPE } from "@/lib/env-config";
 import { AmbientBackground } from "./AmbientBackground";
@@ -17,8 +16,7 @@ function LoginContent() {
 	const t = useTranslations("auth");
 	const tCommon = useTranslations("common");
 	const router = useRouter();
-	const [authType, setAuthType] = useState<string | null>(null);
-	const [isLoading, setIsLoading] = useState(true);
+	const authType = AUTH_TYPE;
 	const [urlError, setUrlError] = useState<{ title: string; message: string } | null>(null);
 	const searchParams = useSearchParams();
 
@@ -94,26 +92,14 @@ function LoginContent() {
 				duration: 4000,
 			});
 		}
-
-		// Get the auth type from centralized config
-		setAuthType(AUTH_TYPE);
-		setIsLoading(false);
 	}, [searchParams, t, tCommon]);
-
-	// Use global loading screen for auth type determination - spinner animation won't reset
-	useGlobalLoadingEffect(isLoading);
-
-	// Show nothing while loading - the GlobalLoadingProvider handles the loading UI
-	if (isLoading) {
-		return null;
-	}
 
 	if (authType === "GOOGLE") {
 		return <GoogleLoginButton />;
 	}
 
 	return (
-		<div className="relative w-full overflow-hidden">
+		<div className="relative w-full overflow-hidden bg-muted">
 			<AmbientBackground />
 			<div className="mx-auto flex h-screen max-w-lg flex-col items-center justify-center">
 				<Logo priority className="h-16 w-16 md:h-32 md:w-32 rounded-md transition-all" />

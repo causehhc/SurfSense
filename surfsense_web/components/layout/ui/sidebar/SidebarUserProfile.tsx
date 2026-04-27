@@ -64,6 +64,7 @@ interface SidebarUserProfileProps {
 	isCollapsed?: boolean;
 	theme?: string;
 	setTheme?: (theme: "light" | "dark" | "system") => void;
+	containerClassName?: string;
 }
 
 /**
@@ -149,6 +150,7 @@ export function SidebarUserProfile({
 	isCollapsed = false,
 	theme,
 	setTheme,
+	containerClassName,
 }: SidebarUserProfileProps) {
 	const t = useTranslations("sidebar");
 	const { locale, setLocale } = useLocaleContext();
@@ -181,7 +183,7 @@ export function SidebarUserProfile({
 	// Collapsed view - just show avatar with dropdown
 	if (isCollapsed) {
 		return (
-			<div className="border-t p-2">
+			<div className={cn("border-t p-2", containerClassName)}>
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
 						<button
@@ -327,7 +329,7 @@ export function SidebarUserProfile({
 
 	// Expanded view
 	return (
-		<div className="border-t">
+		<div className={cn("border-t", containerClassName)}>
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
 					<button

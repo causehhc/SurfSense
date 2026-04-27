@@ -2,6 +2,7 @@
 import { IconBrandDiscord, IconBrandReddit, IconMenu2, IconX } from "@tabler/icons-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { SignInButton } from "@/components/auth/sign-in-button";
 import { NavbarGitHubStars } from "@/components/homepage/github-stars-badge";
@@ -56,7 +57,7 @@ export const Navbar = ({ scrolledBgClassName }: NavbarProps = {}) => {
 	}, []);
 
 	return (
-		<div className="fixed top-1 left-0 right-0 z-60 w-full select-none">
+		<div className="sticky top-0 z-60 w-full select-none">
 			<DesktopNav
 				navItems={navItems}
 				isScrolled={isScrolled}
@@ -73,73 +74,42 @@ export const Navbar = ({ scrolledBgClassName }: NavbarProps = {}) => {
 
 const DesktopNav = ({ navItems, isScrolled, scrolledBgClassName }: DesktopNavProps) => {
 	const [hovered, setHovered] = useState<number | null>(null);
+	const pathname = usePathname();
+	const logoHref = pathname?.startsWith("/dashboard") ? "/dashboard" : "/";
 	return (
-		<motion.div
-			onMouseLeave={() => {
-				setHovered(null);
-			}}
-			className={cn(
-				"mx-auto hidden w-full max-w-7xl flex-row items-center justify-between self-start rounded-full px-4 py-2 lg:flex transition-[background-color,border-color,box-shadow] duration-300",
-				isScrolled
-					? (scrolledBgClassName ??
-							"bg-white/80 backdrop-blur-md border border-white/20 shadow-lg dark:bg-neutral-950/80 dark:border-neutral-800/50")
-					: "bg-transparent border border-transparent"
-			)}
-		>
-			<Link
-				href="/"
-				className="flex flex-1 flex-row items-center gap-0.5 hover:opacity-80 transition-opacity"
+		<div className="hidden w-full px-2 pt-1 pb-0 md:px-3 lg:block">
+			<motion.div
+				onMouseLeave={() => {
+					setHovered(null);
+				}}
+				className={cn(
+					"flex w-full flex-row items-center justify-between self-start px-3 pt-1 pb-0 transition-[background-color,border-color,box-shadow] duration-300 rounded-xl border",
+					isScrolled
+						? (scrolledBgClassName ??
+								"bg-muted/40 backdrop-blur-md border-border/60 shadow-sm")
+						: "bg-muted/40 border-transparent"
+				)}
 			>
-				<Logo className="h-8 w-8 rounded-md" disableLink />
-				<span className="dark:text-white/90 text-gray-800 text-lg font-bold">SurfSense</span>
-			</Link>
-			<div className="hidden flex-1 flex-row items-center justify-center space-x-2 text-sm font-medium text-zinc-600 transition duration-200 hover:text-zinc-800 lg:flex lg:space-x-2">
-				{navItems.map((navItem: NavItem, idx: number) => (
-					<Link
-						onMouseEnter={() => setHovered(idx)}
-						onMouseLeave={() => setHovered(null)}
-						className="relative px-4 py-2 text-neutral-600 dark:text-neutral-300"
-						key={`link=${idx}`}
-						href={navItem.link}
-					>
-						{hovered === idx && (
-							<motion.div
-								layoutId="hovered"
-								className="absolute inset-0 h-full w-full rounded-full bg-gray-100 dark:bg-neutral-800"
-							/>
-						)}
-						<span className="relative z-20">{navItem.name}</span>
-					</Link>
-				))}
-			</div>
-			<div className="flex flex-1 items-center justify-end gap-2">
 				<Link
-					href="https://discord.gg/ejRNvftDp9"
-					target="_blank"
-					rel="noopener noreferrer"
-					className="hidden rounded-full p-2 hover:bg-gray-100 dark:hover:bg-neutral-800 transition-colors md:flex items-center justify-center"
+					href={logoHref}
+					className="flex flex-1 flex-row items-center gap-0.5 hover:opacity-80 transition-opacity"
 				>
-					<IconBrandDiscord className="h-5 w-5 text-neutral-600 dark:text-neutral-300" />
+					<Logo className="h-8 w-8 rounded-md" disableLink />
+					<span className="dark:text-white/90 text-gray-800 text-lg font-bold">LogicAnalyzer</span>
 				</Link>
-				<Link
-					href="https://www.reddit.com/r/SurfSense/"
-					target="_blank"
-					rel="noopener noreferrer"
-					className="hidden rounded-full p-2 hover:bg-gray-100 dark:hover:bg-neutral-800 transition-colors md:flex items-center justify-center"
-				>
-					<IconBrandReddit className="h-5 w-5 text-neutral-600 dark:text-neutral-300" />
-				</Link>
-				<NavbarGitHubStars className="hidden md:flex" />
-				<ThemeTogglerComponent />
-				<SignInButton variant="desktop" />
-			</div>
-		</motion.div>
+				<div className="flex flex-1 items-center justify-end gap-2">
+					<SignInButton variant="desktop" />
+				</div>
+			</motion.div>
+		</div>
 	);
 };
 
 const MobileNav = ({ navItems, isScrolled, scrolledBgClassName }: MobileNavProps) => {
 	const [open, setOpen] = useState(false);
 	const navRef = useRef<HTMLDivElement>(null);
+	const pathname = usePathname();
+	const logoHref = pathname?.startsWith("/dashboard") ? "/dashboard" : "/";
 
 	useEffect(() => {
 		if (!open) return;
@@ -164,20 +134,20 @@ const MobileNav = ({ navItems, isScrolled, scrolledBgClassName }: MobileNavProps
 			animate={{ borderRadius: open ? "4px" : "2rem" }}
 			key={String(open)}
 			className={cn(
-				"relative mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col items-center justify-between px-4 py-2 lg:hidden transition-[background-color,border-color,box-shadow] duration-300",
+				"relative mx-auto flex w-full flex-col items-center justify-between px-4 py-3 lg:hidden transition-[background-color,border-color,box-shadow] duration-300",
 				isScrolled
 					? (scrolledBgClassName ??
-							"bg-white/80 backdrop-blur-md border border-white/20 shadow-lg dark:bg-neutral-950/80 dark:border-neutral-800/50")
-					: "bg-transparent border border-transparent"
+							"bg-muted/40 backdrop-blur-md border-b border-border/60")
+					: "bg-muted/40 border-b border-transparent"
 			)}
 		>
 			<div className="flex w-full flex-row items-center justify-between">
 				<Link
-					href="/"
+					href={logoHref}
 					className="flex flex-row items-center gap-2 hover:opacity-80 transition-opacity"
 				>
 					<Logo className="h-8 w-8 rounded-md" disableLink />
-					<span className="dark:text-white/90 text-gray-800 text-lg font-bold">SurfSense</span>
+					<span className="dark:text-white/90 text-gray-800 text-lg font-bold">LogicAnalyzer</span>
 				</Link>
 				<button
 					type="button"
