@@ -1,7 +1,7 @@
 
 # L2系统架构
 > RoadMap: [L2SysArch_Roadmap](./docs/L2SysArch_Roadmap.drawio)
-![L2SysArch_Roadmap](./docs/L2SysArch_Roadmap.svg)
+![L2SysArch_Roadmap](./docs/L2SysArch_Roadmap.png)
 
 ## 1. 产品功能
 |1. 用户管理|2. 知识库管理|3. 文档管理|4. 话题管理|
