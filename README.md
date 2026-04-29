@@ -1,264 +1,83 @@
-<a href="https://www.surfsense.com/"><img width="1584" height="396" alt="readme_banner" src="https://github.com/user-attachments/assets/9361ef58-1753-4b6e-b275-5020d8847261" /></a>
 
-
-
-<div align="center">
-<a href="https://discord.gg/ejRNvftDp9">
-<img src="https://img.shields.io/discord/1359368468260192417" alt="Discord">
-</a>
-<a href="https://www.reddit.com/r/SurfSense/">
-<img src="https://img.shields.io/reddit/subreddit-subscribers/SurfSense?style=social" alt="Reddit">
-</a>
-</div>
-
-<div align="center">
-
-[English](README.md) | [Español](README.es.md) | [Português](README.pt-BR.md) | [हिन्दी](README.hi.md) | [简体中文](README.zh-CN.md)
-
-</div>
-<div align="center">
-<a href="https://trendshift.io/repositories/13606" target="_blank"><img src="https://trendshift.io/api/badge/repositories/13606" alt="MODSetter%2FSurfSense | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
-</div>
-
-# SurfSense
-
-NotebookLM is one of the best and most useful AI platforms out there, but once you start using it regularly you also feel its limitations leaving something to be desired more.
-
-1. There are limits on the amount of sources you can add in a notebook.
-2. There are limits on the number of notebooks you can have.
-3. You cannot have sources that exceed 500,000 words and are more than 200MB.
-4. You are vendor locked in to Google services (LLMs, usage models, etc.) with no option to configure them.
-5. Limited external data sources and service integrations.
-6. NotebookLM Agent is specifically optimised for just studying and researching, but you can do so much more with the source data.
-7. Lack of multiplayer support.
-
-...and more.
-
-**SurfSense is specifically made to solve these problems.** SurfSense empowers you to:
-
-- **Control Your Data Flow** - Keep your data private and secure.
-- **No Data Limits** - Add an unlimited amount of sources and notebooks.
-- **No Vendor Lock-in** - Configure any LLM, image, TTS, and STT models to use.
-- **25+ External Data Sources** - Add your sources from Google Drive, OneDrive, Dropbox, Notion, and many other external services.
-- **Real-Time Multiplayer Support** - Work easily with your team members in a shared notebook.
-- **AI File Sorting** - Automatically organize your documents into a smart folder hierarchy using AI-powered categorization by source, date, and topic.
-- **Desktop App** - Get AI assistance in any application with Quick Assist, General Assist, Extreme Assist, and local folder sync.
-
-...and more to come.
-
-
-
-## Video Agent Sample
-
-https://github.com/user-attachments/assets/012a7ffa-6f76-4f06-9dda-7632b470057a
-
-
-
-## Podcast Agent Sample
-
-https://github.com/user-attachments/assets/a0a16566-6967-4374-ac51-9b3e07fbecd7
-
-
-## How to Use SurfSense
-
-### Cloud
-
-1. Go to [surfsense.com](https://www.surfsense.com) and login.
-
-<p align="center"><img src="surfsense_web/public/homepage/hero_tutorial/LoginFlowGif.gif" alt="Login" /></p>
-
-2. Connect your connectors and sync. Enable periodic syncing to keep connectors synced.
-
-<p align="center"><img src="surfsense_web/public/homepage/hero_tutorial/ConnectorFlowGif.gif" alt="Connectors" /></p>
-
-3. Till connectors data index, upload Documents.
-
-<p align="center"><img src="surfsense_web/public/homepage/hero_tutorial/DocUploadGif.gif" alt="Upload Documents" /></p>
-
-4. Once everything is indexed, Ask Away (Use Cases):
-
-   - Desktop App — General Assist
-
-   <p align="center"><img src="surfsense_web/public/homepage/hero_tutorial/general_assist.gif" alt="General Assist" /></p>
-
-   - Desktop App — Quick Assist
-
-   <p align="center"><img src="surfsense_web/public/homepage/hero_tutorial/quick_assist.gif" alt="Quick Assist" /></p>
-
-   - Desktop App — Extreme Assist
-
-   <p align="center"><img src="surfsense_web/public/homepage/hero_tutorial/extreme_assist.gif" alt="Extreme Assist" /></p>
-
-   - Desktop App — Watch Local Folder
-
-   <p align="center"><img src="surfsense_web/public/homepage/hero_tutorial/folder_watch.gif" alt="Watch Local Folder" /></p>
-
-   - Video Generation
-
-   <p align="center"><img src="surfsense_web/public/homepage/hero_tutorial/video_gen_gif.gif" alt="Video Generation" /></p>
-
-   - Basic search and citation
-
-   <p align="center"><img src="surfsense_web/public/homepage/hero_tutorial/BSNCGif.gif" alt="Search and Citation" /></p>
-
-   - Document Mention QNA
-
-   <p align="center"><img src="surfsense_web/public/homepage/hero_tutorial/BQnaGif_compressed.gif" alt="Document Mention QNA" /></p>
-   <p align="center"><img src="surfsense_web/public/homepage/hero_tutorial/BQnaGif_compressed.gif" alt="Document Mention QNA" /></p>
-
-   - Report Generations and Exports (PDF, DOCX, HTML, LaTeX, EPUB, ODT, Plain Text)
-
-   <p align="center"><img src="surfsense_web/public/homepage/hero_tutorial/ReportGenGif_compressed.gif" alt="Report Generation" /></p>
-
-   - Podcast Generations
-
-   <p align="center"><img src="surfsense_web/public/homepage/hero_tutorial/PodcastGenGif.gif" alt="Podcast Generation" /></p>
-
-   - Image Generations
-
-   <p align="center"><img src="surfsense_web/public/homepage/hero_tutorial/ImageGenGif.gif" alt="Image Generation" /></p>
-
-   - And more coming soon.
-
-
-### Self Hosted
-
-Run SurfSense on your own infrastructure for full data control and privacy.
-
-**Prerequisites:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) must be installed and running.
-
-#### For Linux/MacOS users:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/MODSetter/SurfSense/main/docker/scripts/install.sh | bash
-```
-
-#### For Windows users:
-
-```bash
-irm https://raw.githubusercontent.com/MODSetter/SurfSense/main/docker/scripts/install.ps1 | iex
-```
-
-The install script sets up [Watchtower](https://github.com/nicholas-fedor/watchtower) automatically for daily auto-updates. To skip it, add the `--no-watchtower` flag.
-
-For Docker Compose, manual installation, and other deployment options, see the [docs](https://www.surfsense.com/docs/).
-
-### Desktop App
-
-SurfSense also ships a desktop app that brings AI assistance to every application on your computer. Download it from the [latest release](https://github.com/MODSetter/SurfSense/releases/latest).
-
-The desktop app includes these powerful features:
-
-- **General Assist** — Launch SurfSense instantly from any application with a global shortcut.
-- **Quick Assist** — Select text anywhere, then ask AI to explain, rewrite, or act on it.
-- **Extreme Assist** — Get inline writing suggestions powered by your knowledge base as you type in any app.
-- **Watch Local Folder** — Watch a local folder and automatically sync file changes to your knowledge base. **Pro tip:** Point it at your Obsidian vault to keep your notes searchable in SurfSense.
-
-All features operate against your chosen search space, so your answers are always grounded in your own data.
-
-### How to Realtime Collaborate (Beta)
-
-1. Go to Manage Members page and create an invite.
-
-   <p align="center"><img src="https://github.com/user-attachments/assets/40ed7683-5aa6-48a0-a3df-00575528c392" alt="Invite Members" /></p>
-
-2. Teammate joins and that SearchSpace becomes shared.
-
-   <p align="center"><img src="https://github.com/user-attachments/assets/ea4e1057-4d2b-4fd2-9ca0-cd19286a285e" alt="Invite Join Flow" /></p>
-
-3. Make chat shared.
-
-   <p align="center"><img src="https://github.com/user-attachments/assets/17b93904-0888-4c3a-ac12-51a24a8ea26a" alt="Make Chat Shared" /></p>
-
-4. Your team can now chat in realtime.
-
-   <p align="center"><img src="surfsense_web/public/homepage/hero_realtime/RealTimeChatGif.gif" alt="Realtime Chat" /></p>
-
-5. Add comment to tag teammates.
-
-   <p align="center"><img src="surfsense_web/public/homepage/hero_realtime/RealTimeCommentsFlow.gif" alt="Realtime Comments" /></p>
-
-## SurfSense vs Google NotebookLM
-
-| Feature | Google NotebookLM | SurfSense |
-|---------|-------------------|-----------|
-| **Sources per Notebook** | 50 (Free) to 600 (Ultra, $249.99/mo) | Unlimited |
-| **Number of Notebooks** | 100 (Free) to 500 (paid tiers) | Unlimited |
-| **Source Size Limit** | 500,000 words / 200MB per source | No limit |
-| **Pricing** | Free tier available; Pro $19.99/mo, Ultra $249.99/mo | Free and open source, self-host on your own infra |
-| **LLM Support** | Google Gemini only | 100+ LLMs via OpenAI spec & LiteLLM |
-| **Embedding Models** | Google only | 6,000+ embedding models, all major rerankers |
-| **Local / Private LLMs** | Not available | Full support (vLLM, Ollama) - your data stays yours |
-| **Self Hostable** | No | Yes - Docker one-liner or full Docker Compose |
-| **Open Source** | No | Yes |
-| **External Connectors** | Google Drive, YouTube, websites | 27+ connectors - Search Engines, Google Drive, OneDrive, Dropbox, Slack, Teams, Jira, Notion, GitHub, Discord & [more](#external-sources) |
-| **File Format Support** | PDFs, Docs, Slides, Sheets, CSV, Word, EPUB, images, web URLs, YouTube | 50+ formats - documents, images, videos via LlamaCloud, Unstructured, or Docling (local) |
-| **Search** | Semantic search | Hybrid Search - Semantic + Full Text with Hierarchical Indices & Reciprocal Rank Fusion |
-| **Cited Answers** | Yes | Yes - Perplexity-style cited responses |
-| **Agentic Architecture** | No | Yes - powered by [LangChain Deep Agents](https://docs.langchain.com/oss/python/deepagents/overview) with planning, subagents, and file system access |
-| **Real-Time Multiplayer** | Shared notebooks with Viewer/Editor roles (no real-time chat) | RBAC with Owner / Admin / Editor / Viewer roles, real-time chat & comment threads |
-| **Video Generation** | Cinematic Video Overviews via Veo 3 (Ultra only) | Available (NotebookLM is better here, actively improving) |
-| **Presentation Generation** | Better looking slides but not editable | Create editable, slide-based presentations |
-| **Podcast Generation** | Audio Overviews with customizable hosts and languages | Available with multiple TTS providers (NotebookLM is better here, actively improving) |
-| **AI File Sorting** | No | LLM-powered auto-categorization into source, date, category, and subcategory folders |
-| **Desktop App** | No | Native app with General Assist, Quick Assist, Extreme Assist, and local folder sync |
-| **Browser Extension** | No | Cross-browser extension to save any webpage, including auth-protected pages |
-
-<details>
-<summary><b>Full list of External Sources</b></summary>
-<a id="external-sources"></a>
-
-Search Engines (Tavily, LinkUp) · SearxNG · Google Drive · OneDrive · Dropbox · Slack · Microsoft Teams · Linear · Jira · ClickUp · Confluence · BookStack · Notion · Gmail · YouTube Videos · GitHub · Discord · Airtable · Google Calendar · Luma · Circleback · Elasticsearch · Obsidian, and more to come.
-
-</details>
-
-
-## FEATURE REQUESTS AND FUTURE
-
-
-**SurfSense is actively being developed.** While it's not yet production-ready, you can help us speed up the process.
-
-Join the [SurfSense Discord](https://discord.gg/ejRNvftDp9) and help shape the future of SurfSense!
-
-## Roadmap
-
-Stay up to date with our development progress and upcoming features!  
-Check out our public roadmap and contribute your ideas or feedback:
-
-**Roadmap Discussion:** [SurfSense 2026 Roadmap](https://github.com/MODSetter/SurfSense/discussions/565)
-
-**Kanban Board:** [SurfSense Project Board](https://github.com/users/MODSetter/projects/3)
-
-
-## Contribute
-
-All contributions welcome, from stars and bug reports to backend improvements. See [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
-
-Thanks to all our Surfers:
-
-<a href="https://github.com/MODSetter/SurfSense/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=MODSetter/SurfSense" />
-</a>
-
-## Star History
-
-<a href="https://www.star-history.com/#MODSetter/SurfSense&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=MODSetter/SurfSense&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=MODSetter/SurfSense&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=MODSetter/SurfSense&type=Date" />
- </picture>
-</a>
-
----
----
-<p align="center">
-    <img 
-      src="https://github.com/user-attachments/assets/329c9bc2-6005-4aed-a629-700b5ae296b4" 
-      alt="Catalyst Project" 
-      width="200"
-    />
-</p>
-
----
----
+# L2系统架构
+> [L2SysArch_Roadmap](./docs/L2SysArch_Roadmap.drawio)
+
+## 1. 产品需求
+### 1.1 用户管理
+#### 1.1.1 注册
+|#|Stack|Name|File|Function|Comment|
+|-|-----|----|----|--------|-------|
+|1|frontend|注册页提交|surfsense_web/app/(home)/register/page.tsx|RegisterPage.submitForm()|校验两次密码一致；调用注册 mutation；成功后跳转登录页|
+|2|frontend|注册 mutation|surfsense_web/atoms/auth/auth-mutation.atoms.ts|registerMutationAtom.mutationFn()|把 RegisterRequest 透传给 authApiService.register()|
+|3|frontend|调用后端注册 API|surfsense_web/lib/apis/auth-api.service.ts|AuthApiService.register()|zod 校验请求体；HTTP POST /auth/register|
+|4|frontend|请求封装/鉴权白名单|surfsense_web/lib/apis/base-api.service.ts|BaseApiService.request()/post()|/auth/register 在 noAuthEndpoints 白名单内；发送 JSON 并做统一错误映射|
+|5|backend|注册路由挂载|surfsense_backend/app/app.py|app.include_router(fastapi_users.get_register_router)|暴露 POST /auth/register；注册限流 rate_limit_register；开关控制 registration_allowed|
+|6|backend|注册实现|fastapi-users 内置|由 get_register_router(UserRead, UserCreate) 生成 handler|校验/创建用户；写入用户表；返回 UserRead|
+|7|backend|注册后初始化钩子|surfsense_backend/app/users.py|UserManager.on_after_register()|创建默认 SearchSpace、默认角色、默认 membership、默认系统 prompts|
+|8|Database|用户与初始化数据落库|surfsense_backend/app/db.py|-|用户表模型 User(SQLAlchemyBaseUserTableUUID)（表名通常为 user）；以及 SearchSpace/SearchSpaceRole/SearchSpaceMembership/Prompt 等在注册后被插入|
+#### 1.1.2 登录
+#### 1.1.3 修改密码
+#### 1.1.4 系统LLM API配置
+#### 1.1.5 注销
+
+### 1.2 知识库管理
+### 1.2.1 创建
+|#|Stack|Name|File|Function|Comment|
+|-|-----|----|----|--------|-------|
+|1|frontend|弹窗表单提交|surfsense_web/components/layout/ui/dialogs/CreateSearchSpaceDialog.tsx|CreateSearchSpaceDialog.handleSubmit()|弹窗表单提交，调用创建 mutation，成功后跳转 /dashboard/{id}/onboard|
+|2|frontend|Jotai mutation 封装|surfsense_web/atoms/search-spaces/search-space-mutation.atoms.ts|createSearchSpaceMutationAtom.mutationFn()|Jotai mutation 封装，转调 API service，并在成功后刷新缓存列表|
+|3|frontend|Zod 校验|surfsense_web/lib/apis/search-spaces-api.service.ts|SearchSpacesApiService.createSearchSpace()|HTTP POST /api/v1/searchspaces，request/response 用 Zod 校验|
+|4|backend|创建 SearchSpace 记录|surfsense_backend/app/routes/search_spaces_routes.py|create_search_space()|创建 SearchSpace 记录（SearchSpaceCreate 入参），flush 拿到 ID|
+|5|backend|初始化 RBAC|surfsense_backend/app/routes/search_spaces_routes.py|create_default_roles_and_membership()|为新知识库初始化 RBAC（Owner/Editor/Viewer）并把创建者写入 membership（owner）|
+|6|Database|写入表|surfsense_backend/app/db.py|SearchSpace / SearchSpaceRole / SearchSpaceMembership|写入表 searchspaces、search_space_roles、search_space_memberships；默认角色配置来自 get_default_roles_config()|
+### 1.2.2 查看
+### 1.2.3 系统预设提示词
+### 1.2.4 删除
+
+### 1.3 文档管理
+### 1.3.1 上传解析/chunking/Embedding
+|#|Stack|Name|File|Function|Comment|
+|-|-----|----|----|--------|-------|
+|1|frontend|组装 FormData|documents-api.service.ts|uploadDocument()|组装 FormData(files, search_space_id, should_summarize, use_vision_llm, processing_mode)，调用 POST /api/v1/documents/fileupload（批量分片上传）|
+|2|backend|让UI立刻可见|documents_routes.py|create_documents_file_upload()|Phase1 先创建/更新 Document(status=pending, title=filename, content="Processing...") 让 UI 立刻可见；Phase2 调 dispatcher.dispatch_file_processing(...) 投递后台任务。|
+|3|backend|调用 Celery|task_dispatcher.py|CeleryTaskDispatcher.dispatch_file_processing()|调用 Celery process_file_upload_with_document_task.delay(...)|
+|4|backend|执行解析+索引document_tasks.py|process_file_upload_with_document_task()|加载 Document，置 status=processing，调用 process_file_in_background_with_document(...) 执行解析+索引；失败则置 status=failed(reason)。|
+|5|backend|统一“解析入口”|file_processors.py|_extract_file_content()|统一“解析入口”，调用 EtlPipelineService.extract(EtlRequest) 得到 markdown_content（以及 etl_service）|
+|6|backend|文件类型分类|etl_pipeline_service.py|EtlPipelineService.extract()|按文件类型分类（document/image/plaintext…），并按配置 ETL_SERVICE 路由到解析器，产出 EtlResult.markdown_content|
+|7|backend|解析为 markdown 文本|parsers/docling.py|unstructured.py|parse_with_docling() | parse_with_unstructured()|把 file_path 解析为 markdown 文本（主产物）|
+|8|backend|开始indexing|file_processors.py|process_file_in_background_with_document() → UploadDocumentAdapter.index()|拿到 markdown_content 后进入 indexing；这里开始 chunking/embedding|
+|9|backend|包装成 ConnectorDocument|file_upload_adapter.py|UploadDocumentAdapter.index() → IndexingPipelineService.index()|把 markdown 包装成 ConnectorDocument，调用 indexing pipeline|
+|10|backend|chunking|document_chunker.py|chunk_text(source_markdown)|chunk 文本列表|
+|11|backend|embedding|document_embedder.py|embed_texts([summary_or_content, *chunks])|summary embedding + chunk embeddings|
+|12|Database|落库|-|-|写 Document.embedding、写多条 Chunk(content, embedding)，最后 Document.status=ready()|
+### 1.3.2 查看
+### 1.3.3 删除
+
+### 1.4 话题管理
+### 1.4.1 提问/检索/回答/显示引用
+|#|Stack|Name|File|Function|Comment|
+|-|-----|----|----|--------|-------|
+|1|frontend|发起提问|surfsense_web/app/dashboard/[search_space_id]/new-chat/[[...chat_id]]/page.tsx|onNew(message)|组装 NewChatRequest（chat_id/search_space_id/user_query/mentioned_* /disabled_tools），fetch POST /api/v1/new_chat，readSSEStream() 消费 SSE（text-delta/tool-*）更新消息 UI|
+|2|backend|鉴权SSE|surfsense_backend/app/routes/new_chat_routes.py|handle_new_chat(request: NewChatRequest, session, user)|校验 thread & 权限；根据 SearchSpace.agent_llm_id 选 LLM config；返回 StreamingResponse(stream_new_chat(...))|
+|3|backend|RAG 主编排：创建 Agent + 事件流转 SSE|surfsense_backend/app/tasks/chat/stream_new_chat.py|stream_new_chat(...)|加载 LLM → create_surfsense_deep_agent(...) → agent.astream_events(...)；把事件格式化成 Vercel AI SDK SSE（text-delta/tool-* / data-*）逐条 yield 给前端|
+|4|backend|检索：每轮对最后一句用户输入做 KB 检索并注入“可读文档”|surfsense_backend/app/agents/new_chat/middleware/knowledge_search.py|KnowledgeBaseSearchMiddleware.abefore_agent(state, runtime)|对最后一条 HumanMessage 做 query rewrite/时间范围（_plan_search_inputs）→ search_knowledge_base(...)（hybrid search）→ build_scoped_filesystem(...)（把 chunks 生成 <chunk id='...'> XML）→ 注入“合成 ls(/documents)”让模型后续用 read_file 读取 chunk|
+|5|backend|引用：强制模型在回答里输出 [citation:chunk_id]|surfsense_backend/app/agents/new_chat/system_prompt.py|SURFSENSE_CITATION_INSTRUCTIONS|要求所有基于文档的事实都用 [citation:<chunk id>] 标注（chunk_id 来自 Step4 生成的 XML）|
+|6|backend|显示引用：把 [citation:*] 变成可点击组件|surfsense_web/components/assistant-ui/markdown-text.tsx|parseTextWithCitations()（CITATION_REGEX）|把 [citation:123] / [citation:doc-123] / [citation:https://...] 替换为 InlineCitation/UrlCitation|
+|7|frontend|点击引用查看|surfsense_web/components/assistant-ui/inline-citation.tsx|InlineCitation({ chunkId, isDocsChunk })|点击后打开 SourceDetailPanel 展示 chunk 来源详情（按 chunkId 拉取/展示）|
+### 1.4.2 归档
+### 1.4.3 删除
+
+## 2. 产品部署
+### 2.1 Server
+### 2.2 Docker
+
+## 3. 产品合规
+### 3.1 DNS
+
+## 4. 产品算法
+### 4.1 ScNN/Sora
+### 4.2 Ground
+
+## 5. 产品推广
+### 5.1 演示
+### 5.2 计划书
