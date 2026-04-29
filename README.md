@@ -3,7 +3,38 @@
 > RoadMap: [L2SysArch_Roadmap](./docs/L2SysArch_Roadmap.drawio)
 ![L2SysArch_Roadmap](./docs/L2SysArch_Roadmap.svg)
 
-## 1. 产品需求
+## 1. 产品功能
+|1. 用户管理|2. 知识库管理|3. 文档管理|4. 话题管理|
+|-|-|-|-|
+|注册|创建|上传解析/chunking/Embedding|提问/检索/回答/显示引用|
+|登录|查看|查看|归档|
+|修改密码|系统预设提示词|删除|删除|
+|系统LLM API配置|删除|-|-|
+|注销|-|-|-|
+
+## 2. 产品部署
+|1. Server|2. Docker|
+|-|-|
+|TODO|TODO|
+
+## 3. 产品合规
+### 3.1 DNS
+|1. DNS|
+|-|
+|TODO|
+
+## 4. 产品算法
+|1. ScNN/Sora|2. Ground|
+|-|-|
+|TODO|TODO|
+
+## 5. 产品推广
+|1. 演示|2. 计划书|
+|-|-|
+|TODO|TODO|
+
+> <<<>>>===========================>>>
+# 软件路径
 ### 1.1 用户管理
 #### 1.1.1 注册
 |#|Stack|Name|File|Function|Comment|
@@ -17,10 +48,13 @@
 |7|backend|注册后初始化钩子|surfsense_backend/app/users.py|UserManager.on_after_register()|创建默认 SearchSpace、默认角色、默认 membership、默认系统 prompts|
 |8|Database|用户与初始化数据落库|surfsense_backend/app/db.py|-|用户表模型 User(SQLAlchemyBaseUserTableUUID)（表名通常为 user）；以及 SearchSpace/SearchSpaceRole/SearchSpaceMembership/Prompt 等在注册后被插入|
 #### 1.1.2 登录
+TODO
 #### 1.1.3 修改密码
+TODO
 #### 1.1.4 系统LLM API配置
+TODO
 #### 1.1.5 注销
-
+TODO
 ### 1.2 知识库管理
 ### 1.2.1 创建
 |#|Stack|Name|File|Function|Comment|
@@ -32,9 +66,11 @@
 |5|backend|初始化 RBAC|surfsense_backend/app/routes/search_spaces_routes.py|create_default_roles_and_membership()|为新知识库初始化 RBAC（Owner/Editor/Viewer）并把创建者写入 membership（owner）|
 |6|Database|写入表|surfsense_backend/app/db.py|SearchSpace / SearchSpaceRole / SearchSpaceMembership|写入表 searchspaces、search_space_roles、search_space_memberships；默认角色配置来自 get_default_roles_config()|
 ### 1.2.2 查看
+TODO
 ### 1.2.3 系统预设提示词
+TODO
 ### 1.2.4 删除
-
+TODO
 ### 1.3 文档管理
 ### 1.3.1 上传解析/chunking/Embedding
 |#|Stack|Name|File|Function|Comment|
@@ -52,8 +88,9 @@
 |11|backend|embedding|document_embedder.py|embed_texts([summary_or_content, *chunks])|summary embedding + chunk embeddings|
 |12|Database|落库|-|-|写 Document.embedding、写多条 Chunk(content, embedding)，最后 Document.status=ready()|
 ### 1.3.2 查看
+TODO
 ### 1.3.3 删除
-
+TODO
 ### 1.4 话题管理
 ### 1.4.1 提问/检索/回答/显示引用
 |#|Stack|Name|File|Function|Comment|
@@ -66,19 +103,6 @@
 |6|backend|显示引用：把 [citation:*] 变成可点击组件|surfsense_web/components/assistant-ui/markdown-text.tsx|parseTextWithCitations()（CITATION_REGEX）|把 [citation:123] / [citation:doc-123] / [citation:https://...] 替换为 InlineCitation/UrlCitation|
 |7|frontend|点击引用查看|surfsense_web/components/assistant-ui/inline-citation.tsx|InlineCitation({ chunkId, isDocsChunk })|点击后打开 SourceDetailPanel 展示 chunk 来源详情（按 chunkId 拉取/展示）|
 ### 1.4.2 归档
+TODO
 ### 1.4.3 删除
-
-## 2. 产品部署
-### 2.1 Server
-### 2.2 Docker
-
-## 3. 产品合规
-### 3.1 DNS
-
-## 4. 产品算法
-### 4.1 ScNN/Sora
-### 4.2 Ground
-
-## 5. 产品推广
-### 5.1 演示
-### 5.2 计划书
+TODO
