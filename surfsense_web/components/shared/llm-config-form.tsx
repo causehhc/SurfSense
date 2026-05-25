@@ -138,6 +138,9 @@ export function LLMConfigForm({
 		if (provider?.apiBase) {
 			form.setValue("api_base", provider.apiBase);
 		}
+		if (provider?.defaultLitellmParams) {
+			form.setValue("litellm_params", provider.defaultLitellmParams);
+		}
 	};
 
 	const handleFormSubmit = async (values: FormValues) => {

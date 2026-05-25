@@ -4,6 +4,7 @@ export interface LLMProvider {
 	example: string;
 	description: string;
 	apiBase?: string;
+	defaultLitellmParams?: Record<string, unknown>;
 }
 
 export const LLM_PROVIDERS: LLMProvider[] = [
@@ -187,6 +188,19 @@ export const LLM_PROVIDERS: LLMProvider[] = [
 		example: "MiniMax-M2.5, MiniMax-M2.5-highspeed",
 		description: "High-performance models with 204K context",
 		apiBase: "https://api.minimax.io/v1",
+	},
+	{
+		value: "VIO",
+		label: "VIO",
+		example: "Default, VIO:GPT-4o, VIO:Claude-3-5-Sonnet",
+		description: "Company internal VIO LLM gateway (OpenAI-compatible)",
+		apiBase: "https://vio.automotive-wan.com:446",
+		defaultLitellmParams: {
+			extra_headers: {
+				useLegacyCompletionsEndpoint: "false",
+				"X-Tenant-ID": "default_tenant",
+			},
+		},
 	},
 	{
 		value: "CUSTOM",

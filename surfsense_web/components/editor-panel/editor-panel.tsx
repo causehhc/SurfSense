@@ -3,10 +3,16 @@
 import { useAtomValue, useSetAtom } from "jotai";
 import { Download, FileQuestionMark, FileText, Loader2, RefreshCw, XIcon } from "lucide-react";
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { closeEditorPanelAtom, editorPanelAtom } from "@/atoms/editor/editor-panel.atom";
+import {
+	closeEditorPanelAtom,
+	editorPanelAtom,
+	type EditorPanelMode,
+} from "@/atoms/editor/editor-panel.atom";
 import { VersionHistoryButton } from "@/components/documents/version-history";
+import { DocumentChunksPanel } from "@/components/documents/document-chunks-panel";
+import { EditorPanelSkeleton } from "@/components/editor-panel/editor-panel-skeleton";
 import { MarkdownViewer } from "@/components/markdown-viewer";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -33,39 +39,27 @@ interface EditorContent {
 
 const EDITABLE_DOCUMENT_TYPES = new Set(["FILE", "NOTE"]);
 
-function EditorPanelSkeleton() {
-	return (
-		<div className="space-y-6 p-6">
-			<div className="h-6 w-3/4 rounded-md bg-muted/60 animate-pulse" />
-			<div className="space-y-2.5">
-				<div className="h-3 w-full rounded-md bg-muted/60 animate-pulse" />
-				<div className="h-3 w-[95%] rounded-md bg-muted/60 animate-pulse [animation-delay:100ms]" />
-				<div className="h-3 w-[88%] rounded-md bg-muted/60 animate-pulse [animation-delay:200ms]" />
-				<div className="h-3 w-[60%] rounded-md bg-muted/60 animate-pulse [animation-delay:300ms]" />
-			</div>
-			<div className="h-5 w-2/5 rounded-md bg-muted/60 animate-pulse [animation-delay:400ms]" />
-			<div className="space-y-2.5">
-				<div className="h-3 w-full rounded-md bg-muted/60 animate-pulse [animation-delay:500ms]" />
-				<div className="h-3 w-[92%] rounded-md bg-muted/60 animate-pulse [animation-delay:600ms]" />
-				<div className="h-3 w-[75%] rounded-md bg-muted/60 animate-pulse [animation-delay:700ms]" />
-			</div>
-		</div>
-	);
-}
-
 export function EditorPanelContent({
 	documentId,
 	searchSpaceId,
 	title,
+	mode = "preview",
+	highlightChunkId = null,
+	isDocsChunk = false,
 	onClose,
 }: {
-	documentId: number;
-	searchSpaceId: number;
+	documentId?: number | null;
+	searchSpaceId?: number | null;
 	title: string | null;
+	mode?: EditorPanelMode;
+	highlightChunkId?: number | null;
+	isDocsChunk?: boolean;
 	onClose?: () => void;
 }) {
+	const isCitationOnly = highlightChunkId != null && documentId == null;
+	const isChunkView = isCitationOnly || (mode === "preview" && documentId != null);
 	const [editorDoc, setEditorDoc] = useState<EditorContent | null>(null);
-	const [isLoading, setIsLoading] = useState(true);
+	const [isLoading, setIsLoading] = useState(!isChunkView);
 	const [error, setError] = useState<string | null>(null);
 	const [saving, setSaving] = useState(false);
 	const [downloading, setDownloading] = useState(false);
@@ -75,10 +69,29 @@ export function EditorPanelContent({
 	const initialLoadDone = useRef(false);
 	const changeCountRef = useRef(0);
 	const [displayTitle, setDisplayTitle] = useState(title || "Untitled");
+	const [chunkViewMeta, setChunkViewMeta] = useState<{ title: string; segmentCount: number } | null>(
+		null
+	);
 
 	const isLargeDocument = (editorDoc?.content_size_bytes ?? 0) > LARGE_DOCUMENT_THRESHOLD;
+	const isPreviewMode = mode === "preview";
 
 	useEffect(() => {
+		setChunkViewMeta(null);
+	}, [documentId]);
+
+	const handleChunksResolved = useCallback(
+		(info: { title: string; segmentCount: number }) => setChunkViewMeta(info),
+		[]
+	);
+
+	useEffect(() => {
+		if (isChunkView) {
+			setIsLoading(false);
+			return;
+		}
+		if (!documentId || !searchSpaceId) return;
+
 		const controller = new AbortController();
 		setIsLoading(true);
 		setError(null);
@@ -122,8 +135,11 @@ export function EditorPanelContent({
 				}
 
 				markdownRef.current = data.source_markdown;
-				setDisplayTitle(data.title || title || "Untitled");
-				setEditorDoc(data);
+				const nextDoc = data as EditorContent;
+				startTransition(() => {
+					setDisplayTitle(nextDoc.title || title || "Untitled");
+					setEditorDoc(nextDoc);
+				});
 				initialLoadDone.current = true;
 			} catch (err) {
 				if (controller.signal.aborted) return;
@@ -136,7 +152,7 @@ export function EditorPanelContent({
 
 		doFetch().catch(() => {});
 		return () => controller.abort();
-	}, [documentId, searchSpaceId, title]);
+	}, [documentId, searchSpaceId, title, isChunkView]);
 
 	const handleMarkdownChange = useCallback((md: string) => {
 		markdownRef.current = md;
@@ -186,18 +202,27 @@ export function EditorPanelContent({
 	const isEditableType = editorDoc
 		? EDITABLE_DOCUMENT_TYPES.has(editorDoc.document_type ?? "") && !isLargeDocument
 		: false;
+	const showPlateEditor = !isPreviewMode && isEditableType;
 
 	return (
 		<>
 			<div className="flex items-center justify-between px-4 py-2 shrink-0 border-b">
 				<div className="flex-1 min-w-0">
-					<h2 className="text-sm font-semibold truncate">{displayTitle}</h2>
-					{isEditableType && editedMarkdown !== null && (
+					<h2 className="text-sm font-semibold truncate">
+						{isChunkView ? chunkViewMeta?.title || displayTitle : displayTitle}
+					</h2>
+					{isChunkView && chunkViewMeta && chunkViewMeta.segmentCount > 0 && (
+						<p className="text-[10px] text-muted-foreground">
+							共 {chunkViewMeta.segmentCount} 个分段
+							{isCitationOnly ? " · 引用来源" : ""}
+						</p>
+					)}
+					{showPlateEditor && editedMarkdown !== null && (
 						<p className="text-[10px] text-muted-foreground">Unsaved changes</p>
 					)}
 				</div>
 				<div className="flex items-center gap-1 shrink-0">
-					{editorDoc?.document_type && (
+					{editorDoc?.document_type && documentId != null && (
 						<VersionHistoryButton documentId={documentId} documentType={editorDoc.document_type} />
 					)}
 					{onClose && (
@@ -210,7 +235,18 @@ export function EditorPanelContent({
 			</div>
 
 			<div className="flex-1 overflow-hidden">
-				{isLoading ? (
+				{isChunkView ? (
+					<DocumentChunksPanel
+						documentId={documentId}
+						searchSpaceId={searchSpaceId}
+						title={isCitationOnly ? null : displayTitle}
+						highlightChunkId={highlightChunkId}
+						isDocsChunk={isDocsChunk}
+						embedded
+						onResolved={handleChunksResolved}
+						className="h-full"
+					/>
+				) : isLoading ? (
 					<EditorPanelSkeleton />
 				) : error || !editorDoc ? (
 					<div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
@@ -287,7 +323,7 @@ export function EditorPanelContent({
 						</Alert>
 						<MarkdownViewer content={editorDoc.source_markdown} />
 					</div>
-				) : isEditableType ? (
+				) : showPlateEditor ? (
 					<PlateEditor
 						key={documentId}
 						preset="full"
@@ -324,7 +360,11 @@ function DesktopEditorPanel() {
 		return () => document.removeEventListener("keydown", handleKeyDown);
 	}, [closePanel]);
 
-	if (!panelState.isOpen || !panelState.documentId || !panelState.searchSpaceId) return null;
+	const canShow =
+		panelState.isOpen &&
+		(panelState.highlightChunkId != null ||
+			(!!panelState.documentId && !!panelState.searchSpaceId));
+	if (!canShow) return null;
 
 	return (
 		<div className="flex w-[50%] max-w-[700px] min-w-[380px] flex-col border-l bg-sidebar text-sidebar-foreground animate-in slide-in-from-right-4 duration-300 ease-out">
@@ -332,6 +372,9 @@ function DesktopEditorPanel() {
 				documentId={panelState.documentId}
 				searchSpaceId={panelState.searchSpaceId}
 				title={panelState.title}
+				mode={panelState.mode}
+				highlightChunkId={panelState.highlightChunkId}
+				isDocsChunk={panelState.isDocsChunk}
 				onClose={closePanel}
 			/>
 		</div>
@@ -342,7 +385,10 @@ function MobileEditorDrawer() {
 	const panelState = useAtomValue(editorPanelAtom);
 	const closePanel = useSetAtom(closeEditorPanelAtom);
 
-	if (!panelState.documentId || !panelState.searchSpaceId) return null;
+	const canShow =
+		panelState.highlightChunkId != null ||
+		(!!panelState.documentId && !!panelState.searchSpaceId);
+	if (!canShow) return null;
 
 	return (
 		<Drawer
@@ -363,6 +409,9 @@ function MobileEditorDrawer() {
 						documentId={panelState.documentId}
 						searchSpaceId={panelState.searchSpaceId}
 						title={panelState.title}
+						mode={panelState.mode}
+						highlightChunkId={panelState.highlightChunkId}
+						isDocsChunk={panelState.isDocsChunk}
 					/>
 				</div>
 			</DrawerContent>
@@ -374,7 +423,11 @@ export function EditorPanel() {
 	const panelState = useAtomValue(editorPanelAtom);
 	const isDesktop = useMediaQuery("(min-width: 1024px)");
 
-	if (!panelState.isOpen || !panelState.documentId) return null;
+	if (
+		!panelState.isOpen ||
+		(panelState.highlightChunkId == null && !panelState.documentId)
+	)
+		return null;
 
 	if (isDesktop) {
 		return <DesktopEditorPanel />;
@@ -387,7 +440,12 @@ export function MobileEditorPanel() {
 	const panelState = useAtomValue(editorPanelAtom);
 	const isDesktop = useMediaQuery("(min-width: 1024px)");
 
-	if (isDesktop || !panelState.isOpen || !panelState.documentId) return null;
+	if (
+		isDesktop ||
+		!panelState.isOpen ||
+		(panelState.highlightChunkId == null && !panelState.documentId)
+	)
+		return null;
 
 	return <MobileEditorDrawer />;
 }

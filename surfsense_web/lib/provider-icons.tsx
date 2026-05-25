@@ -115,6 +115,8 @@ export function getProviderIcon(
 			return <TogetherAiIcon className={cn(className)} />;
 		case "VERTEX_AI":
 			return <VertexAiIcon className={cn(className)} />;
+		case "VIO":
+			return <OpenaiIcon className={cn(className)} />;
 		case "XAI":
 			return <XaiIcon className={cn(className)} />;
 		case "XINFERENCE":

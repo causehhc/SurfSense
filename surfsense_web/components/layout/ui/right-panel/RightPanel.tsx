@@ -61,8 +61,8 @@ function RightPanelCollapseButton({ isCollapsed, onToggle }: { isCollapsed: bool
 	);
 }
 
-const PANEL_WIDTHS = { sources: 485, report: 640, editor: 640, "hitl-edit": 640 } as const;
-const COLLAPSED_PANEL_WIDTH = 60;
+/** Single default width for the right panel — unchanged when switching tabs (sources / preview / citation). */
+const RIGHT_PANEL_DEFAULT_WIDTH = 485;
 
 export function RightPanel({ documentsPanel }: RightPanelProps) {
 	if (!documentsPanel) return null;
@@ -78,7 +78,8 @@ export function RightPanel({ documentsPanel }: RightPanelProps) {
 
 	const documentsOpen = documentsPanel.open ?? false;
 	const reportOpen = reportState.isOpen && !!reportState.reportId;
-	const editorOpen = editorState.isOpen && !!editorState.documentId;
+	const editorOpen =
+		editorState.isOpen && (!!editorState.documentId || editorState.highlightChunkId != null);
 	const hitlEditOpen = hitlEditState.isOpen && !!hitlEditState.onSave;
 	const hasContent = documentsOpen || reportOpen || editorOpen || hitlEditOpen;
 
@@ -112,10 +113,8 @@ export function RightPanel({ documentsPanel }: RightPanelProps) {
 					: "sources";
 	}
 
-	const targetWidth = PANEL_WIDTHS[effectiveTab];
-	const { panelWidth, handleMouseDown: onResizeMouseDown, isDragging: isResizing } = useRightPanelResize(
-		targetWidth
-	);
+	const { panelWidth, handleMouseDown: onResizeMouseDown, isDragging: isResizing } =
+		useRightPanelResize(RIGHT_PANEL_DEFAULT_WIDTH);
 
 	if (!hasContent) return null;
 
@@ -138,7 +137,7 @@ export function RightPanel({ documentsPanel }: RightPanelProps) {
 
 			<aside
 				className={[
-					"relative flex h-full min-h-0 max-h-full shrink-0 flex-col overflow-hidden rounded-xl border bg-main-panel text-foreground select-none",
+					"relative flex h-full min-h-0 max-h-full shrink-0 flex-col overflow-hidden rounded-xl border bg-main-panel text-foreground",
 					!isResizing ? "transition-[width] duration-200 ease-out" : "",
 					collapsed ? "w-[60px]" : "",
 				].join(" ")}
@@ -154,6 +153,7 @@ export function RightPanel({ documentsPanel }: RightPanelProps) {
 					</div>
 				) : (
 					<div className="relative flex-1 min-h-0 overflow-hidden">
+						{effectiveTab === "sources" && documentsOpen && documentsPanel && (
 							<div className="h-full">
 								<DocumentsSidebar
 									open={documentsPanel.open}
@@ -165,6 +165,43 @@ export function RightPanel({ documentsPanel }: RightPanelProps) {
 									}
 								/>
 							</div>
+						)}
+						{effectiveTab === "report" && reportOpen && (
+							<div className="h-full flex flex-col">
+								<ReportPanelContent
+									reportId={reportState.reportId as number}
+									title={reportState.title || "Report"}
+									onClose={closeReport}
+									shareToken={reportState.shareToken}
+								/>
+							</div>
+						)}
+						{effectiveTab === "editor" && editorOpen && (
+							<div className="h-full flex flex-col">
+								<EditorPanelContent
+									documentId={editorState.documentId}
+									searchSpaceId={editorState.searchSpaceId}
+									title={editorState.title}
+									mode={editorState.mode}
+									highlightChunkId={editorState.highlightChunkId}
+									isDocsChunk={editorState.isDocsChunk}
+									onClose={closeEditor}
+								/>
+							</div>
+						)}
+						{effectiveTab === "hitl-edit" && hitlEditOpen && hitlEditState.onSave && (
+							<div className="h-full flex flex-col">
+								<HitlEditPanelContent
+									title={hitlEditState.title}
+									content={hitlEditState.content}
+									toolName={hitlEditState.toolName}
+									contentFormat={hitlEditState.contentFormat}
+									extraFields={hitlEditState.extraFields}
+									onSave={hitlEditState.onSave}
+									onClose={closeHitlEdit}
+								/>
+							</div>
+						)}
 					</div>
 				)}
 			</aside>

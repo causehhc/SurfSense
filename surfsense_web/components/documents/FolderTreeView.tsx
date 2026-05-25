@@ -45,6 +45,8 @@ interface FolderTreeViewProps {
 	onRescanFolder?: (folder: FolderDisplay) => void;
 	onStopWatchingFolder?: (folder: FolderDisplay) => void;
 	onExportFolder?: (folder: FolderDisplay) => void;
+	/** Simplified document rows for RightPanel compact mode. */
+	variant?: "default" | "compact";
 }
 
 function groupBy<T>(items: T[], keyFn: (item: T) => string | number): Record<string | number, T[]> {
@@ -83,6 +85,7 @@ export function FolderTreeView({
 	onRescanFolder,
 	onStopWatchingFolder,
 	onExportFolder,
+	variant = "default",
 }: FolderTreeViewProps) {
 	const foldersByParent = useMemo(() => groupBy(folders, (f) => f.parentId ?? "root"), [folders]);
 
@@ -286,6 +289,7 @@ export function FolderTreeView({
 						onVersionHistory={onVersionHistory}
 						contextMenuOpen={openContextMenuId === `doc-${d.id}`}
 						onContextMenuOpenChange={(open) => setOpenContextMenuId(open ? `doc-${d.id}` : null)}
+						variant={variant}
 					/>
 				);
 			}
@@ -366,6 +370,7 @@ export function FolderTreeView({
 					onVersionHistory={onVersionHistory}
 					contextMenuOpen={openContextMenuId === `doc-${d.id}`}
 					onContextMenuOpenChange={(open) => setOpenContextMenuId(open ? `doc-${d.id}` : null)}
+					variant={variant}
 				/>
 			);
 		}

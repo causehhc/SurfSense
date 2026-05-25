@@ -240,6 +240,7 @@ class LiteLLMProvider(StrEnum):
     HUGGINGFACE = "HUGGINGFACE"
     GITHUB_MODELS = "GITHUB_MODELS"
     MINIMAX = "MINIMAX"
+    VIO = "VIO"
     CUSTOM = "CUSTOM"
 
 

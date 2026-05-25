@@ -3,9 +3,6 @@
 import {
 	Check,
 	ChevronUp,
-	Download,
-	ExternalLink,
-	Info,
 	Languages,
 	Laptop,
 	LogOut,
@@ -30,9 +27,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
 import { useLocaleContext } from "@/contexts/LocaleContext";
-import { usePlatform } from "@/hooks/use-platform";
-import { GITHUB_RELEASES_URL, usePrimaryDownload } from "@/lib/desktop-download-utils";
-import { APP_VERSION } from "@/lib/env-config";
 import { cn } from "@/lib/utils";
 import type { User } from "../../types/layout.types";
 
@@ -50,11 +44,6 @@ const THEMES = [
 	{ value: "light" as const, name: "Light", icon: Sun },
 	{ value: "dark" as const, name: "Dark", icon: Moon },
 	{ value: "system" as const, name: "System", icon: Laptop },
-];
-
-const LEARN_MORE_LINKS = [
-	{ key: "documentation" as const, href: "https://surfsense.com/docs" },
-	{ key: "github" as const, href: "https://github.com/MODSetter/SurfSense" },
 ];
 
 interface SidebarUserProfileProps {
@@ -154,13 +143,10 @@ export function SidebarUserProfile({
 }: SidebarUserProfileProps) {
 	const t = useTranslations("sidebar");
 	const { locale, setLocale } = useLocaleContext();
-	const { isDesktop } = usePlatform();
-	const { os, primary } = usePrimaryDownload();
 	const [isLoggingOut, setIsLoggingOut] = useState(false);
 	const bgColor = stringToColor(user.email);
 	const initials = getInitials(user.email);
 	const displayName = user.name || user.email.split("@")[0];
-	const downloadUrl = primary?.url ?? GITHUB_RELEASES_URL;
 
 	const handleLanguageChange = (newLocale: "en" | "es" | "pt" | "hi" | "zh") => {
 		setLocale(newLocale);
@@ -278,38 +264,6 @@ export function SidebarUserProfile({
 								</DropdownMenuSubContent>
 							</DropdownMenuPortal>
 						</DropdownMenuSub>
-
-						<DropdownMenuSub>
-							<DropdownMenuSubTrigger>
-								<Info className="h-4 w-4" />
-								{t("learn_more")}
-							</DropdownMenuSubTrigger>
-							<DropdownMenuPortal>
-								<DropdownMenuSubContent className="min-w-[180px] gap-1">
-									{LEARN_MORE_LINKS.map((link) => (
-										<DropdownMenuItem key={link.key} asChild>
-											<a href={link.href} target="_blank" rel="noopener noreferrer">
-												<span className="flex-1">{t(link.key)}</span>
-												<ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-											</a>
-										</DropdownMenuItem>
-									))}
-									<DropdownMenuSeparator className="dark:bg-neutral-700" />
-									<p className="select-none px-2 py-1.5 text-xs text-muted-foreground/50">
-										v{APP_VERSION}
-									</p>
-								</DropdownMenuSubContent>
-							</DropdownMenuPortal>
-						</DropdownMenuSub>
-
-						{!isDesktop && (
-							<DropdownMenuItem asChild className="font-medium">
-								<a href={downloadUrl} target="_blank" rel="noopener noreferrer">
-									<Download className="h-4 w-4" strokeWidth={2.5} />
-									{t("download_for_os", { os })}
-								</a>
-							</DropdownMenuItem>
-						)}
 
 						<DropdownMenuSeparator className="dark:bg-neutral-700" />
 
@@ -432,38 +386,6 @@ export function SidebarUserProfile({
 							</DropdownMenuSubContent>
 						</DropdownMenuPortal>
 					</DropdownMenuSub>
-
-					<DropdownMenuSub>
-						<DropdownMenuSubTrigger>
-							<Info className="h-4 w-4" />
-							{t("learn_more")}
-						</DropdownMenuSubTrigger>
-						<DropdownMenuPortal>
-							<DropdownMenuSubContent className="min-w-[180px] gap-1">
-								{LEARN_MORE_LINKS.map((link) => (
-									<DropdownMenuItem key={link.key} asChild>
-										<a href={link.href} target="_blank" rel="noopener noreferrer">
-											<span className="flex-1">{t(link.key)}</span>
-											<ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-										</a>
-									</DropdownMenuItem>
-								))}
-								<DropdownMenuSeparator className="dark:bg-neutral-700" />
-								<p className="select-none px-2 py-1.5 text-xs text-muted-foreground/50">
-									v{APP_VERSION}
-								</p>
-							</DropdownMenuSubContent>
-						</DropdownMenuPortal>
-					</DropdownMenuSub>
-
-					{!isDesktop && (
-						<DropdownMenuItem asChild className="font-medium">
-							<a href={downloadUrl} target="_blank" rel="noopener noreferrer">
-								<Download className="h-4 w-4" strokeWidth={2.5} />
-								{t("download_for_os", { os })}
-							</a>
-						</DropdownMenuItem>
-					)}
 
 					<DropdownMenuSeparator className="dark:bg-neutral-700" />
 

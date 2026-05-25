@@ -17,6 +17,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { LocaleProvider } from "@/contexts/LocaleContext";
 import { PlatformProvider } from "@/contexts/platform-context";
 import { ReactQueryClientProvider } from "@/lib/query-client/query-client.provider";
+import { PRODUCT_NAME } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 const roboto = Roboto({
@@ -45,7 +46,10 @@ export const metadata: Metadata = {
 	alternates: {
 		canonical: "https://surfsense.com",
 	},
-	title: "SurfSense – Open Source, Privacy-Focused NotebookLM Alternative for Teams",
+	title: {
+		default: PRODUCT_NAME,
+		template: `%s - ${PRODUCT_NAME}`,
+	},
 	description:
 		"Open source NotebookLM alternative for teams with no data limits. Use ChatGPT, Claude AI, and any AI model for free.",
 	keywords: [

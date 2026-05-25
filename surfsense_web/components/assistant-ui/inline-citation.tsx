@@ -1,10 +1,10 @@
 "use client";
 
+import { useSetAtom } from "jotai";
 import { FileText } from "lucide-react";
 import type { FC } from "react";
-import { useState } from "react";
+import { openCitationPanelAtom } from "@/atoms/editor/editor-panel.atom";
 import { useCitationMetadata } from "@/components/assistant-ui/citation-metadata-context";
-import { SourceDetailPanel } from "@/components/new-chat/source-detail-panel";
 import { Citation } from "@/components/tool-ui/citation";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -15,11 +15,10 @@ interface InlineCitationProps {
 
 /**
  * Inline citation for knowledge-base chunks (numeric chunk IDs).
- * Renders a clickable badge showing the actual chunk ID that opens the SourceDetailPanel.
- * Negative chunk IDs indicate anonymous/synthetic uploads and render as a static badge.
+ * Opens the cited document segments in the right panel (shared with document preview).
  */
 export const InlineCitation: FC<InlineCitationProps> = ({ chunkId, isDocsChunk = false }) => {
-	const [isOpen, setIsOpen] = useState(false);
+	const openCitationPanel = useSetAtom(openCitationPanelAtom);
 
 	if (chunkId < 0) {
 		return (
@@ -38,26 +37,21 @@ export const InlineCitation: FC<InlineCitationProps> = ({ chunkId, isDocsChunk =
 		);
 	}
 
+	const chunkLabel = isDocsChunk ? `doc-${chunkId}` : String(chunkId);
+
 	return (
-		<SourceDetailPanel
-			open={isOpen}
-			onOpenChange={setIsOpen}
-			chunkId={chunkId}
-			sourceType={isDocsChunk ? "SURFSENSE_DOCS" : ""}
-			title={isDocsChunk ? "Surfsense Documentation" : "Source"}
-			description=""
-			url=""
-			isDocsChunk={isDocsChunk}
-		>
-			<button
-				type="button"
-				onClick={() => setIsOpen(true)}
-				className="ml-0.5 inline-flex h-5 min-w-5 cursor-pointer items-center justify-center rounded-md bg-muted/60 px-1.5 text-[11px] font-medium text-muted-foreground align-baseline shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none"
-				title={`View source chunk #${chunkId}`}
-			>
-				{chunkId}
-			</button>
-		</SourceDetailPanel>
+		<Tooltip>
+			<TooltipTrigger asChild>
+				<button
+					type="button"
+					onClick={() => openCitationPanel({ chunkId, isDocsChunk })}
+					className="ml-0.5 inline-flex h-5 min-w-5 cursor-pointer items-center justify-center rounded-md bg-muted/60 px-1.5 text-[11px] font-medium text-muted-foreground align-baseline shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none"
+				>
+					#{chunkLabel}
+				</button>
+			</TooltipTrigger>
+			<TooltipContent>查看引用来源 · Chunk #{chunkLabel}</TooltipContent>
+		</Tooltip>
 	);
 };
 
@@ -76,8 +70,6 @@ interface UrlCitationProps {
 
 /**
  * Inline citation for live web search results (URL-based chunk IDs).
- * Renders a compact chip with favicon + domain and a hover popover showing the
- * page title and snippet (extracted deterministically from web_search tool results).
  */
 export const UrlCitation: FC<UrlCitationProps> = ({ url }) => {
 	const domain = extractDomain(url);

@@ -99,6 +99,7 @@ const PROVIDER_NAMES: Record<string, string> = {
 	ALIBABA_QWEN: "Qwen",
 	ANYSCALE: "Anyscale",
 	COMETAPI: "CometAPI",
+	VIO: "VIO",
 };
 
 // Provider keys valid per model type, matching backend enums
@@ -135,6 +136,7 @@ const LLM_PROVIDER_KEYS: string[] = [
 	"ANYSCALE",
 	"COMETAPI",
 	"GITHUB_MODELS",
+	"VIO",
 	"CUSTOM",
 ];
 

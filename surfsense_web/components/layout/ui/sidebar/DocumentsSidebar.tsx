@@ -257,6 +257,7 @@ function AuthenticatedDocumentsSidebar({
 
 	const [sidebarDocs, setSidebarDocs] = useAtom(sidebarSelectedDocumentsAtom);
 	const mentionedDocIds = useMemo(() => new Set(sidebarDocs.map((d) => d.id)), [sidebarDocs]);
+	const userDeselectedDocIdsRef = useRef<Set<number>>(new Set());
 
 	// Folder state
 	const [expandedFolderMap, setExpandedFolderMap] = useAtom(expandedFolderIdsAtom);
@@ -698,6 +699,10 @@ function AuthenticatedDocumentsSidebar({
 
 	const handleToggleChatMention = useCallback(
 		(doc: { id: number; title: string; document_type: string }, isMentioned: boolean) => {
+			if (variant === "compact") {
+				if (isMentioned) userDeselectedDocIdsRef.current.add(doc.id);
+				else userDeselectedDocIdsRef.current.delete(doc.id);
+			}
 			if (isMentioned) {
 				setSidebarDocs((prev) => prev.filter((d) => d.id !== doc.id));
 			} else {
@@ -710,7 +715,7 @@ function AuthenticatedDocumentsSidebar({
 				});
 			}
 		},
-		[setSidebarDocs]
+		[setSidebarDocs, variant]
 	);
 
 	const handleToggleFolderSelect = useCallback(
@@ -831,6 +836,7 @@ function AuthenticatedDocumentsSidebar({
 			try {
 				await deleteDocumentMutation({ id });
 				toast.success(t("delete_success") || "Document deleted");
+				userDeselectedDocIdsRef.current.delete(id);
 				setSidebarDocs((prev) => prev.filter((d) => d.id !== id));
 				return true;
 			} catch (e) {
@@ -840,6 +846,25 @@ function AuthenticatedDocumentsSidebar({
 		},
 		[deleteDocumentMutation, t, setSidebarDocs]
 	);
+
+	useEffect(() => {
+		if (variant !== "compact") return;
+		const selectableDocs = treeDocuments.filter((d) => {
+			const state = d.status?.state ?? "ready";
+			return state !== "pending" && state !== "processing" && state !== "failed";
+		});
+		setSidebarDocs((prev) => {
+			const existingIds = new Set(prev.map((d) => d.id));
+			const newDocs = selectableDocs
+				.filter((d) => !existingIds.has(d.id) && !userDeselectedDocIdsRef.current.has(d.id))
+				.map((d) => ({
+					id: d.id,
+					title: d.title,
+					document_type: d.document_type as DocumentTypeEnum,
+				}));
+			return newDocs.length > 0 ? [...prev, ...newDocs] : prev;
+		});
+	}, [variant, treeDocuments, setSidebarDocs]);
 
 	useEffect(() => {
 		const handleEscape = (e: KeyboardEvent) => {
@@ -887,11 +912,13 @@ function AuthenticatedDocumentsSidebar({
 									onMoveFolder={handleMoveFolder}
 									onCreateFolder={handleCreateFolder}
 									searchQuery={undefined}
+									variant="compact"
 									onPreviewDocument={(doc) => {
 										openEditorPanel({
 											documentId: doc.id,
 											searchSpaceId,
 											title: doc.title,
+											mode: "preview",
 										});
 									}}
 									onEditDocument={(doc) => {
@@ -899,6 +926,7 @@ function AuthenticatedDocumentsSidebar({
 											documentId: doc.id,
 											searchSpaceId,
 											title: doc.title,
+											mode: "edit",
 										});
 									}}
 									onDeleteDocument={(doc) => handleDeleteDocument(doc.id)}
@@ -1100,6 +1128,7 @@ function AuthenticatedDocumentsSidebar({
 										documentId: doc.id,
 										searchSpaceId,
 										title: doc.title,
+										mode: "preview",
 									});
 								}}
 								onEditDocument={(doc) => {
@@ -1107,6 +1136,7 @@ function AuthenticatedDocumentsSidebar({
 										documentId: doc.id,
 										searchSpaceId,
 										title: doc.title,
+										mode: "edit",
 									});
 								}}
 								onDeleteDocument={(doc) => handleDeleteDocument(doc.id)}
@@ -1356,9 +1386,14 @@ function AnonymousDocumentsSidebar({
 
 	const [sidebarDocs, setSidebarDocs] = useAtom(sidebarSelectedDocumentsAtom);
 	const mentionedDocIds = useMemo(() => new Set(sidebarDocs.map((d) => d.id)), [sidebarDocs]);
+	const userDeselectedDocIdsRef = useRef<Set<number>>(new Set());
 
 	const handleToggleChatMention = useCallback(
 		(doc: { id: number; title: string; document_type: string }, isMentioned: boolean) => {
+			if (variant === "compact") {
+				if (isMentioned) userDeselectedDocIdsRef.current.add(doc.id);
+				else userDeselectedDocIdsRef.current.delete(doc.id);
+			}
 			if (isMentioned) {
 				setSidebarDocs((prev) => prev.filter((d) => d.id !== doc.id));
 			} else {
@@ -1371,7 +1406,7 @@ function AnonymousDocumentsSidebar({
 				});
 			}
 		},
-		[setSidebarDocs]
+		[setSidebarDocs, variant]
 	);
 
 	const uploadedDoc = anonMode.isAnonymous ? anonMode.uploadedDoc : null;
@@ -1460,6 +1495,25 @@ function AnonymousDocumentsSidebar({
 	}, [treeDocuments, search]);
 
 	useEffect(() => {
+		if (variant !== "compact") return;
+		const selectableDocs = treeDocuments.filter((d) => {
+			const state = d.status?.state ?? "ready";
+			return state !== "pending" && state !== "processing" && state !== "failed";
+		});
+		setSidebarDocs((prev) => {
+			const existingIds = new Set(prev.map((d) => d.id));
+			const newDocs = selectableDocs
+				.filter((d) => !existingIds.has(d.id) && !userDeselectedDocIdsRef.current.has(d.id))
+				.map((d) => ({
+					id: d.id,
+					title: d.title,
+					document_type: d.document_type as DocumentTypeEnum,
+				}));
+			return newDocs.length > 0 ? [...prev, ...newDocs] : prev;
+		});
+	}, [variant, treeDocuments, setSidebarDocs]);
+
+	useEffect(() => {
 		const handleEscape = (e: KeyboardEvent) => {
 			if (e.key === "Escape" && open) {
 				if (isMobile) {
@@ -1518,6 +1572,7 @@ function AnonymousDocumentsSidebar({
 									onMoveFolder={() => gate("organize folders")}
 									onCreateFolder={() => gate("create folders")}
 									searchQuery={undefined}
+									variant="compact"
 									onPreviewDocument={() => gate("preview documents")}
 									onEditDocument={() => gate("edit documents")}
 									onDeleteDocument={async () => {

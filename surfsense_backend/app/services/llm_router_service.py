@@ -18,6 +18,8 @@ import time
 from typing import Any
 
 import litellm
+
+from app.services.llm_provider_defaults import merge_litellm_provider_defaults
 from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.exceptions import ContextOverflowError
 from langchain_core.language_models import BaseChatModel
@@ -129,6 +131,7 @@ PROVIDER_MAP = {
     "GITHUB_MODELS": "github",
     "HUGGINGFACE": "huggingface",
     "MINIMAX": "openai",
+    "VIO": "openai",
     "CUSTOM": "custom",
 }
 
@@ -168,6 +171,7 @@ PROVIDER_KEY_DEFAULT_API_BASE = {
     "MOONSHOT": "https://api.moonshot.ai/v1",
     "ZHIPU": "https://open.bigmodel.cn/api/paas/v4",
     "MINIMAX": "https://api.minimax.io/v1",
+    "VIO": "https://vio.automotive-wan.com:446",
 }
 
 
@@ -430,6 +434,8 @@ class LLMRouterService:
             # Add any additional litellm parameters
             if config.get("litellm_params"):
                 litellm_params.update(config["litellm_params"])
+
+            merge_litellm_provider_defaults(provider, litellm_params)
 
             # Extract rate limits if provided
             deployment = {

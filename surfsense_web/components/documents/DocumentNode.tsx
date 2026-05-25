@@ -65,6 +65,8 @@ interface DocumentNodeProps {
 	onVersionHistory?: (doc: DocumentNodeDoc) => void;
 	contextMenuOpen?: boolean;
 	onContextMenuOpenChange?: (open: boolean) => void;
+	/** Simplified row: checkbox + click-to-preview + delete button (RightPanel compact mode). */
+	variant?: "default" | "compact";
 }
 
 export const DocumentNode = React.memo(function DocumentNode({
@@ -80,7 +82,9 @@ export const DocumentNode = React.memo(function DocumentNode({
 	onVersionHistory,
 	contextMenuOpen,
 	onContextMenuOpenChange,
+	variant = "default",
 }: DocumentNodeProps) {
+	const isCompact = variant === "compact";
 	const statusState = doc.status?.state ?? "ready";
 	const isFailed = statusState === "failed";
 	const isProcessing = statusState === "pending" || statusState === "processing";
@@ -93,6 +97,22 @@ export const DocumentNode = React.memo(function DocumentNode({
 			onToggleChatMention(doc, isMentioned);
 		}
 	}, [doc, isMentioned, isSelectable, onToggleChatMention]);
+
+	const handleRowClick = useCallback(() => {
+		if (isCompact) {
+			if (!isUnavailable) onPreview(doc);
+			return;
+		}
+		handleCheckChange();
+	}, [isCompact, isUnavailable, onPreview, doc, handleCheckChange]);
+
+	const handleDeleteClick = useCallback(
+		(e: React.MouseEvent) => {
+			e.stopPropagation();
+			if (!isProcessing) onDelete(doc);
+		},
+		[doc, isProcessing, onDelete]
+	);
 
 	const [{ isDragging }, drag] = useDrag(
 		() => ({
@@ -135,28 +155,25 @@ export const DocumentNode = React.memo(function DocumentNode({
 		[drag]
 	);
 
-	return (
-		<ContextMenu onOpenChange={onContextMenuOpenChange}>
-			<ContextMenuTrigger asChild>
-				{/* biome-ignore lint/a11y/useSemanticElements: contains nested interactive children (Checkbox) that render as <button>, making a semantic <button> wrapper invalid */}
-				<div
-					role="button"
-					tabIndex={0}
-					ref={attachRef}
-					className={cn(
-						"group flex h-8 w-full items-center gap-2.5 rounded-md px-1 text-sm hover:bg-accent/50 cursor-pointer select-none text-left",
-						isMentioned && "bg-accent/30",
-						isDragging && "opacity-40"
-					)}
-					style={{ paddingLeft: `${depth * 16 + 4}px` }}
-					onClick={handleCheckChange}
-					onKeyDown={(e) => {
-						if (e.key === "Enter" || e.key === " ") {
-							e.preventDefault();
-							handleCheckChange();
-						}
-					}}
-				>
+	const row = (
+		/* biome-ignore lint/a11y/useSemanticElements: contains nested interactive children (Checkbox) that render as <button>, making a semantic <button> wrapper invalid */
+		<div
+			role="button"
+			tabIndex={0}
+			ref={attachRef}
+			className={cn(
+				"group flex h-8 w-full items-center gap-2.5 rounded-md px-1 text-sm hover:bg-accent/40 cursor-pointer select-none text-left",
+				isDragging && "opacity-40"
+			)}
+			style={{ paddingLeft: `${depth * 16 + 4}px` }}
+			onClick={handleRowClick}
+			onKeyDown={(e) => {
+				if (e.key === "Enter" || e.key === " ") {
+					e.preventDefault();
+					handleRowClick();
+				}
+			}}
+		>
 					{(() => {
 						if (statusState === "pending") {
 							return (
@@ -197,12 +214,34 @@ export const DocumentNode = React.memo(function DocumentNode({
 							);
 						}
 						return (
-							<Checkbox
-								checked={isMentioned}
-								onCheckedChange={handleCheckChange}
-								onClick={(e) => e.stopPropagation()}
-								className="h-3.5 w-3.5 shrink-0"
-							/>
+							<span
+								role="checkbox"
+								aria-checked={isMentioned}
+								aria-label={isMentioned ? "Deselect for chat" : "Select for chat"}
+								tabIndex={isSelectable ? 0 : -1}
+								className={cn(
+									"flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors",
+									isSelectable && "cursor-pointer hover:bg-accent"
+								)}
+								onClick={(e) => {
+									e.stopPropagation();
+									handleCheckChange();
+								}}
+								onKeyDown={(e) => {
+									if (e.key === "Enter" || e.key === " ") {
+										e.stopPropagation();
+										e.preventDefault();
+										handleCheckChange();
+									}
+								}}
+							>
+								<Checkbox
+									checked={isMentioned}
+									tabIndex={-1}
+									className="h-3.5 w-3.5 shrink-0 pointer-events-none"
+									aria-hidden
+								/>
+							</span>
 						);
 					})()}
 
@@ -221,7 +260,20 @@ export const DocumentNode = React.memo(function DocumentNode({
 						</TooltipContent>
 					</Tooltip>
 
-					<span className="relative shrink-0 flex items-center justify-center h-6 w-6">
+			<span className="relative shrink-0 flex items-center justify-center h-6 w-6">
+				{isCompact ? (
+					<Button
+						variant="ghost"
+						size="icon"
+						className="hidden sm:inline-flex h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 hover:bg-transparent"
+						disabled={isProcessing}
+						onClick={handleDeleteClick}
+					>
+						<Trash2 className="h-3.5 w-3.5" />
+						<span className="sr-only">Delete</span>
+					</Button>
+				) : (
+					<>
 						{getDocumentTypeIcon(
 							doc.document_type as DocumentTypeEnum,
 							"h-3.5 w-3.5 text-muted-foreground"
@@ -297,9 +349,19 @@ export const DocumentNode = React.memo(function DocumentNode({
 								</DropdownMenuItem>
 							</DropdownMenuContent>
 						</DropdownMenu>
-					</span>
-				</div>
-			</ContextMenuTrigger>
+					</>
+				)}
+			</span>
+		</div>
+	);
+
+	if (isCompact) {
+		return row;
+	}
+
+	return (
+		<ContextMenu onOpenChange={onContextMenuOpenChange}>
+			<ContextMenuTrigger asChild>{row}</ContextMenuTrigger>
 
 			{contextMenuOpen && (
 				<ContextMenuContent className="w-40" onClick={(e) => e.stopPropagation()}>

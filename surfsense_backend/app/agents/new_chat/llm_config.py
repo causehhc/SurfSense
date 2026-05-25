@@ -27,6 +27,7 @@ from litellm import get_model_info
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.llm_provider_defaults import merge_litellm_provider_defaults
 from app.services.llm_router_service import (
     AUTO_MODE_ID,
     ChatLiteLLMRouter,
@@ -122,6 +123,7 @@ PROVIDER_MAP = {
     "COMETAPI": "cometapi",
     "HUGGINGFACE": "huggingface",
     "MINIMAX": "openai",
+    "VIO": "openai",
     "CUSTOM": "custom",
 }
 
@@ -492,6 +494,7 @@ def create_chat_litellm_from_config(llm_config: dict) -> ChatLiteLLM | None:
     if llm_config.get("litellm_params"):
         litellm_kwargs.update(llm_config["litellm_params"])
 
+    merge_litellm_provider_defaults(llm_config.get("provider", ""), litellm_kwargs)
     llm = SanitizedChatLiteLLM(**litellm_kwargs)
     _attach_model_profile(llm, model_string)
     return llm
@@ -547,6 +550,7 @@ def create_chat_litellm_from_agent_config(
     if agent_config.litellm_params:
         litellm_kwargs.update(agent_config.litellm_params)
 
+    merge_litellm_provider_defaults(agent_config.provider, litellm_kwargs)
     llm = SanitizedChatLiteLLM(**litellm_kwargs)
     _attach_model_profile(llm, model_string)
     return llm

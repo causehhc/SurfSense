@@ -10,6 +10,7 @@ from sqlalchemy.future import select
 from app.agents.new_chat.llm_config import SanitizedChatLiteLLM
 from app.config import config
 from app.db import NewLLMConfig, SearchSpace
+from app.services.llm_provider_defaults import merge_litellm_provider_defaults
 from app.services.llm_router_service import (
     AUTO_MODE_ID,
     ChatLiteLLMRouter,
@@ -185,6 +186,7 @@ async def validate_llm_config(
                 "ZHIPU": "openai",  # GLM needs special handling
                 "MINIMAX": "openai",
                 "GITHUB_MODELS": "github",
+                "VIO": "openai",
             }
             provider_prefix = provider_map.get(provider, provider.lower())
             model_string = f"{provider_prefix}/{model_name}"
@@ -204,6 +206,7 @@ async def validate_llm_config(
         if litellm_params:
             litellm_kwargs.update(litellm_params)
 
+        merge_litellm_provider_defaults(provider, litellm_kwargs)
         llm = SanitizedChatLiteLLM(**litellm_kwargs)
 
         # Run the test call in a worker thread with a hard timeout. Some
@@ -356,6 +359,7 @@ async def get_search_space_llm_instance(
                     "MOONSHOT": "openai",
                     "ZHIPU": "openai",
                     "MINIMAX": "openai",
+                    "VIO": "openai",
                 }
                 provider_prefix = provider_map.get(
                     global_config["provider"], global_config["provider"].lower()
@@ -373,6 +377,8 @@ async def get_search_space_llm_instance(
 
             if global_config.get("litellm_params"):
                 litellm_kwargs.update(global_config["litellm_params"])
+
+            merge_litellm_provider_defaults(global_config.get("provider", ""), litellm_kwargs)
 
             if disable_streaming:
                 litellm_kwargs["disable_streaming"] = True
@@ -431,6 +437,7 @@ async def get_search_space_llm_instance(
                 "ZHIPU": "openai",
                 "MINIMAX": "openai",
                 "GITHUB_MODELS": "github",
+                "VIO": "openai",
             }
             provider_prefix = provider_map.get(
                 llm_config.provider.value, llm_config.provider.value.lower()
@@ -450,6 +457,8 @@ async def get_search_space_llm_instance(
         # Add any additional litellm parameters
         if llm_config.litellm_params:
             litellm_kwargs.update(llm_config.litellm_params)
+
+        merge_litellm_provider_defaults(llm_config.provider.value, litellm_kwargs)
 
         if disable_streaming:
             litellm_kwargs["disable_streaming"] = True

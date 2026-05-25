@@ -35,6 +35,7 @@ export const liteLLMProviderEnum = z.enum([
 	"HUGGINGFACE",
 	"GITHUB_MODELS",
 	"MINIMAX",
+	"VIO",
 	"CUSTOM",
 ]);
 

@@ -1539,6 +1539,23 @@ export const LLM_MODELS: LLMModel[] = [
 		provider: "MINIMAX",
 		contextWindow: "204K",
 	},
+
+	// VIO (internal gateway)
+	{
+		value: "Default",
+		label: "VIO Default",
+		provider: "VIO",
+	},
+	{
+		value: "VIO:GPT-4o",
+		label: "VIO GPT-4o",
+		provider: "VIO",
+	},
+	{
+		value: "VIO:Claude-3-5-Sonnet",
+		label: "VIO Claude 3.5 Sonnet",
+		provider: "VIO",
+	},
 ];
 
 // Helper function to get models by provider

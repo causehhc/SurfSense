@@ -123,7 +123,7 @@ export function Sidebar({
 			) : (
 				<div className="flex h-14 shrink-0 items-center gap-0 px-1 border-b">
 					<div className="flex min-w-0 flex-1 items-center px-3">
-						<h2 className="select-none text-lg font-semibold truncate">Report</h2>
+						<h2 className="select-none text-lg font-semibold truncate">Thread</h2>
 					</div>
 					<div className="shrink-0">
 						<SidebarCollapseButton

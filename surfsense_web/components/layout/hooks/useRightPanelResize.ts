@@ -35,13 +35,6 @@ export function useRightPanelResize(defaultWidth: number): UseRightPanelResizeRe
 	const startWidthRef = useRef(panelWidth);
 	const hasUserResizedRef = useRef(false);
 
-	// Keep in sync with changing defaults (e.g. tab width) while not dragging.
-	useEffect(() => {
-		if (isDragging) return;
-		// Only apply new defaults if the user hasn't resized in this page session.
-		if (!hasUserResizedRef.current) setPanelWidth(clampWidth(defaultWidth));
-	}, [defaultWidth, isDragging]);
-
 	const handleMouseDown = useCallback(
 		(e: React.MouseEvent) => {
 			e.preventDefault();
