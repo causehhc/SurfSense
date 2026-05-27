@@ -1,12 +1,27 @@
+# Git and local env
 .git
 .gitignore
 .env
+.env.*
+
+# Python environments and caches
 .venv
+venv
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Build artifacts (not needed in image)
 build/
 develop-eggs/
 dist/
@@ -19,9 +34,13 @@ parts/
 sdist/
 var/
 wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-.pytest_cache/
-.coverage
-htmlcov/ 
+
+# Tests and docs (speed up context upload; not used at runtime)
+tests/
+docs/
+*.md
+!alembic/README
+
+# Local-only data
+podcasts/
+.flashrank_cache*

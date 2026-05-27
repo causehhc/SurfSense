@@ -4,11 +4,30 @@
 # Usage (from repo root):
 #   docker compose -f docker/docker-compose.dev.yml up --build
 #
-# This file builds from source and includes dev tools like pgAdmin.
+# Faster backend rebuilds (requires BuildKit — default in Docker Desktop):
+#   - Dependency layer (torch, etc.) is cached until pyproject.toml / uv.lock change.
+#   - pip/uv/playwright wheels persist in docker/buildx-cache/ between builds.
+#   - Only app code changes → quick final layer (editable install, --no-deps).
+#
+# Optional CUDA PyTorch inside the image (large download; needs GPU passthrough):
+#   PYTORCH_CUDA=1 docker compose -f docker/docker-compose.dev.yml build backend
+#
 # For production with prebuilt images, use docker/docker-compose.yml instead.
 # =============================================================================
 
 name: surfsense-dev
+
+x-backend-build: &backend-build
+  context: ../surfsense_backend
+  dockerfile: Dockerfile
+  tags:
+    - surfsense-backend:dev
+  cache_from:
+    - type=local,src=buildx-cache/backend
+  cache_to:
+    - type=local,dest=buildx-cache/backend,mode=max
+  args:
+    PYTORCH_CUDA: ${PYTORCH_CUDA:-0}
 
 services:
   db:
@@ -69,7 +88,8 @@ services:
       retries: 5
 
   backend:
-    build: ../surfsense_backend
+    build: *backend-build
+    image: surfsense-backend:dev
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     volumes:
@@ -114,7 +134,8 @@ services:
       start_period: 200s
 
   celery_worker:
-    build: ../surfsense_backend
+    build: *backend-build
+    image: surfsense-backend:dev
     volumes:
       - ../surfsense_backend/app:/app/app
       - shared_temp:/shared_tmp
@@ -140,7 +161,8 @@ services:
         condition: service_healthy
 
   celery_beat:
-    build: ../surfsense_backend
+    build: *backend-build
+    image: surfsense-backend:dev
     env_file:
       - ../surfsense_backend/.env
     environment:
@@ -217,6 +239,14 @@ services:
       - "${FRONTEND_PORT:-3000}:3000"
     env_file:
       - ../surfsense_web/.env
+    environment:
+      # Browser-facing URLs stay on localhost; server-side routes must use Docker DNS.
+      - FASTAPI_BACKEND_INTERNAL_URL=${FASTAPI_BACKEND_INTERNAL_URL:-http://backend:8000}
+      - NEXT_PUBLIC_FASTAPI_BACKEND_URL=${NEXT_PUBLIC_FASTAPI_BACKEND_URL:-http://localhost:8000}
+      - NEXT_PUBLIC_FASTAPI_BACKEND_AUTH_TYPE=${NEXT_PUBLIC_FASTAPI_BACKEND_AUTH_TYPE:-LOCAL}
+      - NEXT_PUBLIC_ETL_SERVICE=${NEXT_PUBLIC_ETL_SERVICE:-DOCLING}
+      - NEXT_PUBLIC_ZERO_CACHE_URL=${NEXT_PUBLIC_ZERO_CACHE_URL:-http://localhost:${ZERO_CACHE_PORT:-4848}}
+      - NEXT_PUBLIC_DEPLOYMENT_MODE=${NEXT_PUBLIC_DEPLOYMENT_MODE:-self-hosted}
     depends_on:
       backend:
         condition: service_healthy
