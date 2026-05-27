@@ -1,27 +1,28 @@
 """Safe wrapper around deepagents' SummarizationMiddleware.
 
-Upstream issue
---------------
-`deepagents.middleware.summarization.SummarizationMiddleware._aoffload_to_backend`
-(and its sync counterpart) call
-``get_buffer_string(filtered_messages)`` before writing the evicted history
-to the backend file. In recent ``langchain-core`` versions, ``get_buffer_string``
-accesses ``m.text`` which iterates ``self.content`` — this raises
-``TypeError: 'NoneType' object is not iterable`` whenever an ``AIMessage``
-has ``content=None`` (common when a model returns *only* tool_calls, seen
-frequently with Azure OpenAI ``gpt-5.x`` responses streamed through
-LiteLLM).
+Upstream issues
+---------------
+1. LangChain's ``SummarizationMiddleware._acreate_summary`` and deepagents'
+   ``_aoffload_to_backend`` call ``get_buffer_string(...)``. Recent
+   ``langchain-core`` versions iterate ``m.content`` via ``m.text`` — this
+   raises ``TypeError: 'NoneType' object is not iterable`` when an
+   ``AIMessage`` has ``content=None`` (tool_calls-only responses).
 
-The exception aborts the whole agent turn, so the user just sees "Error during
-chat" with no assistant response.
+2. ``SummarizationMiddleware._get_backend`` constructs ``ToolRuntime`` without
+   the ``tools`` argument. Current ``langchain`` / ``langgraph-prebuilt`` require
+   ``tools``, causing ``TypeError: ToolRuntime.__init__() missing 1 required
+   positional argument: 'tools'`` when context compaction triggers on long chats.
 
-Fix
----
-We subclass ``SummarizationMiddleware`` and override
-``_filter_summary_messages`` — the only call site that feeds messages into
-``get_buffer_string`` — to return *copies* of messages whose ``content`` is
-``None`` with ``content=""``. The originals flowing through the rest of the
-agent state are untouched.
+Fixes
+-----
+We subclass ``SummarizationMiddleware`` and override:
+
+- ``_create_summary`` / ``_acreate_summary`` — sanitize messages before the
+  LangChain helper calls ``get_buffer_string`` (the path that crashed in
+  production).
+- ``_filter_summary_messages`` — same sanitization for backend offload.
+- ``_get_backend`` — pass ``tools`` when building ``ToolRuntime`` for backend
+  factories (prefer ``runtime.tools`` when present).
 
 We also expose a drop-in ``create_safe_summarization_middleware`` factory
 that mirrors ``deepagents.middleware.summarization.create_summarization_middleware``
@@ -30,18 +31,23 @@ but instantiates our safe subclass.
 
 from __future__ import annotations
 
+import inspect
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 from deepagents.middleware.summarization import (
     SummarizationMiddleware,
     compute_summarization_defaults,
 )
+from langchain.agents.middleware.types import AgentState
+from langchain.tools import ToolRuntime
+from langgraph.runtime import Runtime
 
 if TYPE_CHECKING:
-    from deepagents.backends.protocol import BACKEND_TYPES
+    from deepagents.backends.protocol import BACKEND_TYPES, BackendProtocol
     from langchain_core.language_models import BaseChatModel
     from langchain_core.messages import AnyMessage
+    from langchain_core.runnables import RunnableConfig
 
 logger = logging.getLogger(__name__)
 
@@ -80,19 +86,56 @@ def _sanitize_message_content(msg: AnyMessage) -> AnyMessage:
         return new_msg
 
 
-class SafeSummarizationMiddleware(SummarizationMiddleware):
-    """`SummarizationMiddleware` that tolerates messages with ``content=None``.
+def _sanitize_messages_for_buffer(messages: list[AnyMessage]) -> list[AnyMessage]:
+    """Coerce ``content=None`` on every message before ``get_buffer_string``."""
 
-    Only ``_filter_summary_messages`` is overridden — this is the single
-    helper invoked by both the sync and async offload paths immediately
-    before ``get_buffer_string``. Normalising here means we get coverage
-    for both without having to copy the (long, rapidly-changing) offload
-    implementations from upstream.
-    """
+    return [_sanitize_message_content(m) for m in messages]
+
+
+class SafeSummarizationMiddleware(SummarizationMiddleware):
+    """`SummarizationMiddleware` hardened for current LangChain ToolRuntime APIs."""
+
+    def _create_summary(self, messages_to_summarize: list[AnyMessage]) -> str:
+        return super()._create_summary(
+            _sanitize_messages_for_buffer(messages_to_summarize)
+        )
+
+    async def _acreate_summary(self, messages_to_summarize: list[AnyMessage]) -> str:
+        return await super()._acreate_summary(
+            _sanitize_messages_for_buffer(messages_to_summarize)
+        )
 
     def _filter_summary_messages(self, messages: list[AnyMessage]) -> list[AnyMessage]:
         filtered = super()._filter_summary_messages(messages)
-        return [_sanitize_message_content(m) for m in filtered]
+        return _sanitize_messages_for_buffer(filtered)
+
+    def _get_backend(
+        self,
+        state: AgentState[Any],
+        runtime: Runtime,
+    ) -> BackendProtocol:
+        """Resolve backend; supply ``tools`` when constructing ``ToolRuntime``.
+
+        Upstream ``deepagents`` omits ``tools``, which breaks on langchain>=1.2
+        when summarization runs on long conversations.
+        """
+        if callable(self._backend):
+            config = cast("RunnableConfig", getattr(runtime, "config", {}))
+            tool_runtime_kwargs: dict[str, Any] = {
+                "state": state,
+                "context": runtime.context,
+                "stream_writer": runtime.stream_writer,
+                "store": runtime.store,
+                "config": config,
+                "tool_call_id": None,
+            }
+            if "tools" in inspect.signature(ToolRuntime.__init__).parameters:
+                tool_runtime_kwargs["tools"] = list(
+                    getattr(runtime, "tools", None) or []
+                )
+            tool_runtime = ToolRuntime(**tool_runtime_kwargs)
+            return self._backend(tool_runtime)  # ty: ignore[call-top-callable]
+        return self._backend
 
 
 def create_safe_summarization_middleware(
